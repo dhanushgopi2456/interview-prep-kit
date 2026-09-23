@@ -1,6 +1,19 @@
-import fetch from 'node-fetch';
 import * as cheerio from 'cheerio';
 import robotsParser from 'robots-parser';
+
+/**
+ * Universal fetch helper:
+ * Uses native global fetch available in Node.js 18+ (including Vercel runtime).
+ * Falls back to dynamic import() to prevent CommonJS require(ESM) errors.
+ */
+async function safeFetch(url: string, init?: RequestInit): Promise<Response> {
+  if (typeof globalThis.fetch === 'function') {
+    return globalThis.fetch(url, init);
+  }
+  const dynamicImport = new Function('specifier', 'return import(specifier)') as (s: string) => Promise<{ default: typeof fetch }>;
+  const mod = await dynamicImport('node-fetch');
+  return mod.default(url, init);
+}
 
 interface CrawlResult {
   success: boolean;
@@ -71,7 +84,7 @@ async function fetchWithRetry(url: string, retries = 3): Promise<CrawlResult> {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
-      const response = await fetch(url, {
+      const response = await safeFetch(url, {
         headers: { 'User-Agent': USER_AGENT },
         signal: controller.signal,
         redirect: 'follow'

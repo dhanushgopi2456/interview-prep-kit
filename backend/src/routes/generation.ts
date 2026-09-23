@@ -5,7 +5,7 @@ import { asyncHandler } from '../middleware/errorHandler';
 import { generateKit } from '../services/generation';
 import { crawlCompanySite } from '../services/research';
 
-const router = Router();
+const router: Router = Router();
 
 router.use(authenticate);
 

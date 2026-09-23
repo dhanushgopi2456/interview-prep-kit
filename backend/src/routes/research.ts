@@ -3,7 +3,7 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 import { crawlCompanySite, findHiringPages, searchPublicDiscussion } from '../services/research';
 
-const router = Router();
+const router: Router = Router();
 
 router.use(authenticate);
 

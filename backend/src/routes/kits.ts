@@ -12,7 +12,7 @@ import {
   updateKitSchema
 } from '../utils/validation';
 
-const router = Router();
+const router: Router = Router();
 
 /*
  * All kit routes require authentication.

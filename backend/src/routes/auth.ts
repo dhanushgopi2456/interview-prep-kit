@@ -12,7 +12,7 @@ import {
   loginSchema
 } from '../utils/validation';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * Create authentication cookie
