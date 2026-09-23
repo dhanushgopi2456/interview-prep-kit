@@ -44,12 +44,20 @@ export function NavHeader({
                 <span className="font-medium text-dark-700 dark:text-dark-300 hidden sm:block">{backLabel}</span>
               </Link>
             ) : (
-              <Link href="/dashboard" className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
-                  <Briefcase className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xl font-bold text-dark-900 dark:text-white">Interview Prep Kit</span>
-              </Link>
+              <div className="flex items-center gap-4">
+                <Link href="/dashboard" className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
+                    <Briefcase className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="text-xl font-bold text-dark-900 dark:text-white">Interview Prep Kit</span>
+                </Link>
+                <Link
+                  href="/"
+                  className="text-sm font-medium text-dark-600 dark:text-dark-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors ml-1"
+                >
+                  Home
+                </Link>
+              </div>
             )}
             {title && (
               <>

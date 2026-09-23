@@ -7,10 +7,12 @@ import { authApi } from '@/lib/api';
 
 interface AuthState {
   user: User | null;
+  token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
 
   setUser: (user: User | null) => void;
+  setToken: (token: string | null) => void;
   setLoading: (loading: boolean) => void;
 
   login: (
@@ -34,6 +36,7 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
 
       user: null,
+      token: null,
       isLoading: true,
       isAuthenticated: false,
 
@@ -44,6 +47,14 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false
         }),
 
+      setToken: (token) => {
+        if (typeof window !== 'undefined') {
+          if (token) localStorage.setItem('auth_token', token);
+          else localStorage.removeItem('auth_token');
+        }
+        set({ token });
+      },
+
       setLoading: (isLoading) =>
         set({
           isLoading
@@ -51,18 +62,25 @@ export const useAuthStore = create<AuthState>()(
 
       /*
        * LOGIN
-       *
-       * Login creates the JWT cookie on the backend.
-       * After successful login, the user becomes authenticated.
        */
       login: async (email, password) => {
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('explicitly_logged_out');
+        }
+
         const { data } = await authApi.login(
           email,
           password
         );
 
+        const token = data.token || null;
+        if (token && typeof window !== 'undefined') {
+          localStorage.setItem('auth_token', token);
+        }
+
         set({
           user: data.user,
+          token,
           isAuthenticated: true,
           isLoading: false
         });
@@ -70,23 +88,27 @@ export const useAuthStore = create<AuthState>()(
 
       /*
        * REGISTER
-       *
-       * Registration only creates the account.
-       * It does NOT keep the user authenticated.
-       *
-       * After registration, the register page redirects
-       * the user to /login.
        */
       register: async (email, password, name) => {
-        await authApi.register(
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('explicitly_logged_out');
+        }
+
+        const { data } = await authApi.register(
           email,
           password,
           name
         );
 
+        const token = data.token || null;
+        if (token && typeof window !== 'undefined') {
+          localStorage.setItem('auth_token', token);
+        }
+
         set({
-          user: null,
-          isAuthenticated: false,
+          user: data.user,
+          token,
+          isAuthenticated: true,
           isLoading: false
         });
       },
@@ -96,10 +118,14 @@ export const useAuthStore = create<AuthState>()(
        */
       logout: async () => {
         try {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('auth_token');
+          }
           await authApi.logout();
         } finally {
           set({
             user: null,
+            token: null,
             isAuthenticated: false,
             isLoading: false
           });
@@ -112,15 +138,24 @@ export const useAuthStore = create<AuthState>()(
       checkAuth: async () => {
         try {
           const { data } = await authApi.me();
+          const token = data.token || (typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null);
+          if (token && typeof window !== 'undefined') {
+            localStorage.setItem('auth_token', token);
+          }
 
           set({
             user: data.user,
-            isAuthenticated: true,
+            token,
+            isAuthenticated: !!data.user,
             isLoading: false
           });
         } catch {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('auth_token');
+          }
           set({
             user: null,
+            token: null,
             isAuthenticated: false,
             isLoading: false
           });
@@ -133,6 +168,7 @@ export const useAuthStore = create<AuthState>()(
 
       partialize: (state) => ({
         user: state.user,
+        token: state.token,
         isAuthenticated: state.isAuthenticated
       })
     }

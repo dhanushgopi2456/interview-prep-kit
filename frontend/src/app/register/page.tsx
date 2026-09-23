@@ -12,7 +12,11 @@ import {
   User,
   Eye,
   EyeOff,
-  Briefcase
+  Briefcase,
+  Sparkles,
+  KeyRound,
+  Check,
+  ArrowRight
 } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -24,7 +28,17 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  const handleAutofillNewUser = () => {
+    const randomSuffix = Math.floor(100 + Math.random() * 900);
+    setName(`Test Candidate ${randomSuffix}`);
+    setEmail(`candidate.${randomSuffix}@example.com`);
+    setPassword('prepkit123');
+    setConfirmPassword('prepkit123');
+    toast.success('Generated test user details!');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,16 +68,10 @@ export default function RegisterPage() {
     try {
       await register(email.trim(), password, name.trim());
 
-      toast.success(
-        'Account created successfully! Please sign in.',
-        {
-          duration: 3000
-        }
-      );
+      toast.success('Account created successfully! Welcome aboard!');
 
-      // Registration does NOT log the user in.
-      // Send the user to the login page.
-      router.push('/login');
+      router.push('/dashboard');
+      router.refresh();
     } catch (error: any) {
       console.error('Registration error:', error);
 
@@ -77,20 +85,23 @@ export default function RegisterPage() {
     }
   };
 
+  const isPasswordLongEnough = password.length >= 8;
+  const doPasswordsMatch = password.length > 0 && password === confirmPassword;
+
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-4">
+    <div className="min-h-screen relative flex items-center justify-center p-4 py-12">
       <AnimatedBackground />
 
-      <div className="w-full max-w-md relative z-10 animate-slide-up">
-        <div className="card p-8">
+      <div className="w-full max-w-lg relative z-10 animate-slide-up">
+        <div className="card p-6 sm:p-8 shadow-xl">
 
           {/* Header */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 mb-6"
+              className="inline-flex items-center gap-2 mb-4 hover:opacity-80 transition-opacity"
             >
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center shadow-sm">
                 <Briefcase className="w-6 h-6 text-white" />
               </div>
 
@@ -103,22 +114,51 @@ export default function RegisterPage() {
               Create Your Account
             </h1>
 
-            <p className="text-dark-500 dark:text-dark-400 mt-2">
-              Start building interview prep kits in minutes
+            <p className="text-dark-500 dark:text-dark-400 mt-1.5 text-sm">
+              Sign up to generate personalized interview prep kits in minutes
             </p>
+          </div>
+
+          {/* Quick Demo Callout */}
+          <div className="mb-6 p-3 rounded-xl bg-primary-50/70 dark:bg-primary-950/30 border border-primary-200/70 dark:border-primary-800/60 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <KeyRound className="w-4 h-4 text-primary-600 dark:text-primary-400 flex-shrink-0" />
+              <span className="text-xs text-dark-700 dark:text-dark-200">
+                Want to test immediately without signing up?
+              </span>
+            </div>
+            <Link
+              href="/login"
+              className="text-xs font-semibold text-primary-700 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200 flex items-center gap-1 flex-shrink-0"
+            >
+              <span>Demo Login</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
 
           {/* Registration Form */}
           <form
             onSubmit={handleSubmit}
-            className="space-y-5"
+            className="space-y-4"
           >
+            {/* Quick Fill Button */}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleAutofillNewUser}
+                disabled={isLoading}
+                className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center gap-1"
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>Autofill test candidate</span>
+              </button>
+            </div>
 
             {/* Name */}
             <div>
               <label
                 htmlFor="name"
-                className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1.5"
+                className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1"
               >
                 Full Name
               </label>
@@ -132,7 +172,7 @@ export default function RegisterPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="input pl-10"
-                  placeholder="John Doe"
+                  placeholder="Alex Morgan"
                   required
                   autoComplete="name"
                   disabled={isLoading}
@@ -144,9 +184,9 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1.5"
+                className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1"
               >
-                Email
+                Email Address
               </label>
 
               <div className="relative">
@@ -158,7 +198,7 @@ export default function RegisterPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="input pl-10"
-                  placeholder="you@example.com"
+                  placeholder="alex@example.com"
                   required
                   autoComplete="email"
                   disabled={isLoading}
@@ -170,7 +210,7 @@ export default function RegisterPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1.5"
+                className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1"
               >
                 Password
               </label>
@@ -194,32 +234,24 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-400 hover:text-dark-600 dark:hover:text-dark-300"
-                  aria-label={
-                    showPassword
-                      ? 'Hide password'
-                      : 'Show password'
-                  }
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-400 hover:text-dark-600 dark:hover:text-dark-300 p-1"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   disabled={isLoading}
                 >
                   {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
+                    <EyeOff className="w-4 h-4" />
                   ) : (
-                    <Eye className="w-5 h-5" />
+                    <Eye className="w-4 h-4" />
                   )}
                 </button>
               </div>
-
-              <p className="mt-1 text-xs text-dark-500 dark:text-dark-400">
-                Must be at least 8 characters
-              </p>
             </div>
 
             {/* Confirm Password */}
             <div>
               <label
                 htmlFor="confirmPassword"
-                className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1.5"
+                className="block text-sm font-medium text-dark-700 dark:text-dark-300 mb-1"
               >
                 Confirm Password
               </label>
@@ -229,15 +261,49 @@ export default function RegisterPage() {
 
                 <input
                   id="confirmPassword"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="input pl-10"
+                  className="input pl-10 pr-10"
                   placeholder="••••••••"
                   required
                   autoComplete="new-password"
                   disabled={isLoading}
                 />
+
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-400 hover:text-dark-600 dark:hover:text-dark-300 p-1"
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  disabled={isLoading}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Password Validation Hints */}
+            <div className="p-2.5 rounded-lg bg-dark-50 dark:bg-dark-900/40 border border-dark-200/60 dark:border-dark-700/60 text-xs space-y-1">
+              <div className="flex items-center gap-1.5">
+                <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${isPasswordLongEnough ? 'bg-emerald-500 text-white' : 'bg-dark-300 dark:bg-dark-600 text-dark-50'}`}>
+                  {isPasswordLongEnough ? <Check className="w-2.5 h-2.5" /> : null}
+                </div>
+                <span className={isPasswordLongEnough ? 'text-emerald-700 dark:text-emerald-400 font-medium' : 'text-dark-500 dark:text-dark-400'}>
+                  At least 8 characters
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center ${doPasswordsMatch ? 'bg-emerald-500 text-white' : 'bg-dark-300 dark:bg-dark-600 text-dark-50'}`}>
+                  {doPasswordsMatch ? <Check className="w-2.5 h-2.5" /> : null}
+                </div>
+                <span className={doPasswordsMatch ? 'text-emerald-700 dark:text-emerald-400 font-medium' : 'text-dark-500 dark:text-dark-400'}>
+                  Passwords match
+                </span>
               </div>
             </div>
 
@@ -245,7 +311,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="btn-primary w-full py-3"
+              className="btn-primary w-full py-3 text-base font-semibold shadow-md mt-2"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -273,22 +339,21 @@ export default function RegisterPage() {
                   Creating account...
                 </span>
               ) : (
-                'Create Account'
+                'Create Account & Start'
               )}
             </button>
           </form>
 
           {/* Login Link */}
-          <p className="mt-6 text-center text-sm text-dark-500 dark:text-dark-400">
+          <div className="mt-8 text-center text-sm text-dark-500 dark:text-dark-400 border-t border-dark-200 dark:border-dark-700 pt-6">
             Already have an account?{' '}
-
             <Link
               href="/login"
-              className="text-primary-600 dark:text-primary-400 hover:underline font-medium"
+              className="text-primary-600 dark:text-primary-400 hover:underline font-semibold"
             >
               Sign in
             </Link>
-          </p>
+          </div>
 
         </div>
       </div>

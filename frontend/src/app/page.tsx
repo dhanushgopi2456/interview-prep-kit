@@ -15,12 +15,6 @@ export default function HomePage() {
     checkAuth();
   }, [checkAuth]);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.push('/dashboard');
-    }
-  }, [isAuthenticated, router]);
-
   const features = [
     { icon: Briefcase, title: 'Company Research', desc: 'Automatically crawl company sites to understand what they do and how they hire' },
     { icon: Zap, title: 'Smart Question Generation', desc: 'AI-powered questions tailored to each requirement with coverage checking' },
@@ -37,19 +31,30 @@ export default function HomePage() {
       <nav className="fixed top-0 left-0 right-0 z-40 glass border-b border-dark-200/50 dark:border-dark-700/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2">
               <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
                 <Code className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold text-dark-900 dark:text-white">Interview Prep Kit</span>
-            </div>
+            </Link>
             <div className="flex items-center gap-4">
-              <Link href="/login" className="btn-ghost text-dark-600 dark:text-dark-300">
-                Sign In
-              </Link>
-              <Link href="/register" className="btn-primary">
-                Get Started
-              </Link>
+              {isAuthenticated ? (
+                <>
+                  <Link href="/dashboard" className="btn-primary flex items-center gap-2">
+                    <Briefcase className="w-4 h-4" />
+                    <span>Go to Dashboard</span>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className="btn-ghost text-dark-600 dark:text-dark-300">
+                    Sign In
+                  </Link>
+                  <Link href="/register" className="btn-primary">
+                    Get Started
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -70,8 +75,8 @@ export default function HomePage() {
               with questions, flashcards, and a day-by-day study schedule.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/register" className="btn-primary text-lg px-8 py-3 w-full sm:w-auto">
-                Start Free - No Credit Card Required
+              <Link href={isAuthenticated ? "/dashboard" : "/register"} className="btn-primary text-lg px-8 py-3 w-full sm:w-auto">
+                {isAuthenticated ? "Open Dashboard" : "Start Free - No Credit Card Required"}
               </Link>
               <Link href="#features" className="btn-secondary text-lg px-8 py-3 w-full sm:w-auto">
                 See How It Works
@@ -114,8 +119,8 @@ export default function HomePage() {
               Join thousands of candidates who use Interview Prep Kit to walk into interviews
               confident and prepared. Start building your kit in minutes.
             </p>
-            <Link href="/register" className="btn-primary text-lg px-10 py-3 inline-block">
-              Create Your First Kit
+            <Link href={isAuthenticated ? "/dashboard" : "/register"} className="btn-primary text-lg px-10 py-3 inline-block">
+              {isAuthenticated ? "Go to Dashboard" : "Create Your First Kit"}
             </Link>
           </div>
         </section>

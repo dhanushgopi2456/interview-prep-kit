@@ -33,37 +33,9 @@ export default function DashboardPage() {
 
   /*
    * ==========================================
-   * CHECK AUTHENTICATION
+   * CHECK AUTHENTICATION & LOAD KITS
    * ==========================================
    */
-  useEffect(() => {
-    const verifyAuth = async () => {
-      try {
-        if (!isAuthenticated) {
-          await checkAuth();
-        }
-      } catch (error) {
-        console.error('Authentication check failed:', error);
-        router.replace('/login');
-      }
-    };
-
-    verifyAuth();
-  }, [isAuthenticated, checkAuth, router]);
-
-  /*
-   * ==========================================
-   * LOAD KITS
-   * ==========================================
-   */
-  useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
-
-    loadKits();
-  }, [isAuthenticated]);
-
   const loadKits = async () => {
     try {
       setIsLoading(true);
@@ -79,6 +51,11 @@ export default function DashboardPage() {
 
       setKits(loadedKits);
     } catch (error: any) {
+      if (error?.response?.status === 401) {
+        router.replace('/login');
+        return;
+      }
+
       console.error('Failed to load kits:', error);
 
       toast.error(
@@ -89,6 +66,38 @@ export default function DashboardPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const init = async () => {
+      try {
+        setIsLoading(true);
+        if (!isAuthenticated) {
+          await checkAuth();
+        }
+        if (isMounted) {
+          await loadKits();
+        }
+      } catch (error: any) {
+        if (error?.response?.status === 401) {
+          router.replace('/login');
+        } else {
+          console.error('Dashboard initialization error:', error);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    init();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, checkAuth, router]);
 
   /*
    * ==========================================
@@ -259,7 +268,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between h-16">
 
             {/* Logo */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
               <Link
                 href="/dashboard"
                 className="flex items-center gap-2"
@@ -271,6 +280,13 @@ export default function DashboardPage() {
                 <span className="text-xl font-bold text-dark-900 dark:text-white">
                   Interview Prep Kit
                 </span>
+              </Link>
+
+              <Link
+                href="/"
+                className="text-sm font-medium text-dark-600 dark:text-dark-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors ml-2"
+              >
+                Home
               </Link>
             </div>
 

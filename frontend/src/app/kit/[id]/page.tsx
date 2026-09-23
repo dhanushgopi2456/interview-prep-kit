@@ -8,7 +8,37 @@ import { useKitStore } from '@/stores/kitStore';
 import { kitsApi, Kit } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
-import { ArrowLeft, Briefcase, Play, Edit3, RefreshCw, ChevronDown, ChevronUp, Plus, Trash2, GripVertical, Eye, EyeOff, Loader2, Check, X, BookOpen, Target, Calendar, FileText, Zap } from 'lucide-react';
+import { ArchitectureDiagram } from '@/components/ArchitectureDiagram';
+import {
+  ArrowLeft,
+  Briefcase,
+  Play,
+  Edit3,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  Trash2,
+  GripVertical,
+  Eye,
+  EyeOff,
+  Loader2,
+  Check,
+  X,
+  BookOpen,
+  Target,
+  Calendar,
+  FileText,
+  Zap,
+  Sparkles,
+  Layers,
+  Cpu,
+  Users,
+  Building2,
+  Search,
+  Copy,
+  ChevronRight
+} from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
@@ -108,50 +138,118 @@ function QuestionEditor({ question, requirements, onUpdate, onDelete, onMove, on
   isPinned: boolean;
 }) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [prompt, setPrompt] = useState(question.prompt);
   const [answerOutline, setAnswerOutline] = useState(question.answerOutline);
   const [difficulty, setDifficulty] = useState(question.difficulty);
   const [category, setCategory] = useState(question.category);
-  const [requirementIds, setRequirementIds] = useState(question.requirementIds);
+  const [requirementIds, setRequirementIds] = useState(question.requirementIds || []);
+  const [diagram, setDiagram] = useState(question.diagram || '');
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    const textToCopy = `Question (${question.category}, Difficulty: ${question.difficulty}/3):\n${question.prompt}\n\nAnswer Outline:\n${question.answerOutline}${question.diagram ? `\n\nArchitecture Diagram:\n${question.diagram}` : ''}`;
+    navigator.clipboard.writeText(textToCopy);
+    setCopied(true);
+    toast.success('Question and outline copied!');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const getCategoryBadge = (cat: string) => {
+    switch (cat) {
+      case 'technical':
+        return {
+          icon: <Cpu className="w-3.5 h-3.5" />,
+          label: 'Technical',
+          className: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800/50'
+        };
+      case 'behavioural':
+        return {
+          icon: <Users className="w-3.5 h-3.5" />,
+          label: 'Behavioural',
+          className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50'
+        };
+      case 'system-design':
+        return {
+          icon: <Layers className="w-3.5 h-3.5" />,
+          label: 'System Design',
+          className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300 border border-orange-200 dark:border-orange-800/50'
+        };
+      case 'company-fit':
+      default:
+        return {
+          icon: <Building2 className="w-3.5 h-3.5" />,
+          label: 'Company Fit',
+          className: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/50'
+        };
+    }
+  };
+
+  const catBadge = getCategoryBadge(question.category);
 
   return (
-    <div className={`p-4 rounded-lg border transition-all ${isPinned ? 'border-primary-300 dark:border-primary-700 bg-primary-50/50 dark:bg-primary-900/20' : 'border-dark-200 dark:border-dark-700'}`}>
+    <div className={`p-4 rounded-xl border transition-all ${isPinned ? 'border-primary-300 dark:border-primary-700 bg-primary-50/40 dark:bg-primary-950/20 shadow-xs' : 'border-dark-200 dark:border-dark-700/80 bg-white/70 dark:bg-dark-800/60 shadow-xs'}`}>
       {isEditing ? (
         <div className="space-y-3">
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            className="textarea text-sm"
-            placeholder="Question prompt..."
-            rows={3}
-          />
-          <textarea
-            value={answerOutline}
-            onChange={(e) => setAnswerOutline(e.target.value)}
-            className="textarea text-sm"
-            placeholder="Answer outline..."
-            rows={3}
-          />
+          <div>
+            <label className="text-xs font-semibold text-dark-700 dark:text-dark-300 mb-1 block">Question Prompt</label>
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              className="textarea text-sm"
+              placeholder="Question prompt..."
+              rows={3}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-dark-700 dark:text-dark-300 mb-1 block">Answer Outline & Model Response</label>
+            <textarea
+              value={answerOutline}
+              onChange={(e) => setAnswerOutline(e.target.value)}
+              className="textarea text-sm"
+              placeholder="Answer outline..."
+              rows={4}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-dark-700 dark:text-dark-300 mb-1 block">
+              Architecture / Flow Diagram (ASCII Blueprint)
+            </label>
+            <textarea
+              value={diagram}
+              onChange={(e) => setDiagram(e.target.value)}
+              className="textarea text-xs font-mono"
+              placeholder="ASCII architecture diagram or flow chart..."
+              rows={5}
+            />
+          </div>
           <div className="flex flex-wrap gap-2">
-            <select value={category} onChange={(e) => setCategory(e.target.value as any)} className="input text-sm w-40">
-              <option value="technical">Technical</option>
-              <option value="behavioural">Behavioural</option>
-              <option value="system-design">System Design</option>
-              <option value="company-fit">Company Fit</option>
-            </select>
-            <select value={difficulty} onChange={(e) => setDifficulty(parseInt(e.target.value) as 1 | 2 | 3)} className="input text-sm w-28">
-              <option value={1}>Easy</option>
-              <option value={2}>Medium</option>
-              <option value={3}>Hard</option>
-            </select>
+            <div>
+              <label className="text-xs text-dark-500 mb-1 block">Category</label>
+              <select value={category} onChange={(e) => setCategory(e.target.value as any)} className="input text-sm w-44">
+                <option value="technical">Technical</option>
+                <option value="behavioural">Behavioural</option>
+                <option value="system-design">System Design</option>
+                <option value="company-fit">Company Fit</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-dark-500 mb-1 block">Difficulty</label>
+              <select value={difficulty} onChange={(e) => setDifficulty(parseInt(e.target.value) as 1 | 2 | 3)} className="input text-sm w-32">
+                <option value={1}>★☆☆ Easy</option>
+                <option value={2}>★★☆ Medium</option>
+                <option value={3}>★★★ Hard</option>
+              </select>
+            </div>
             <div className="w-full">
               <label className="text-xs text-dark-500 dark:text-dark-400 mb-1 block">Linked Requirements</label>
               <div className="flex flex-wrap gap-1">
                 {requirements.map(req => (
                   <button
                     key={req.id}
+                    type="button"
                     onClick={() => setRequirementIds((prev: string[]) => prev.includes(req.id) ? prev.filter((id: string) => id !== req.id) : [...prev, req.id])}
-                    className={`badge text-xs cursor-pointer transition-colors ${requirementIds.includes(req.id) ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300' : 'bg-dark-100 text-dark-500 dark:bg-dark-800 dark:text-dark-400'}`}
+                    className={`badge text-xs cursor-pointer transition-colors ${requirementIds.includes(req.id) ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 font-semibold' : 'bg-dark-100 text-dark-500 dark:bg-dark-800 dark:text-dark-400'}`}
                   >
                     {req.id}
                   </button>
@@ -159,11 +257,17 @@ function QuestionEditor({ question, requirements, onUpdate, onDelete, onMove, on
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => { onUpdate({ prompt, answerOutline, difficulty, category, requirementIds }); setIsEditing(false); }} className="btn-primary text-sm py-1 px-3">
-              Save
+          <div className="flex items-center gap-2 pt-2">
+            <button
+              onClick={() => {
+                onUpdate({ prompt, answerOutline, difficulty, category, requirementIds, diagram: diagram.trim() || undefined });
+                setIsEditing(false);
+              }}
+              className="btn-primary text-sm py-1.5 px-4"
+            >
+              Save Changes
             </button>
-            <button onClick={() => setIsEditing(false)} className="btn-ghost text-sm py-1 px-3">
+            <button onClick={() => setIsEditing(false)} className="btn-ghost text-sm py-1.5 px-3">
               Cancel
             </button>
           </div>
@@ -172,40 +276,123 @@ function QuestionEditor({ question, requirements, onUpdate, onDelete, onMove, on
         <>
           <div className="flex items-start gap-3">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-mono text-dark-500 dark:text-dark-400">{question.id}</span>
-                <span className={`badge text-xs ${question.category === 'technical' ? 'badge-technical' : question.category === 'behavioural' ? 'badge-behavioural' : question.category === 'system-design' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' : 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300'}`}>
-                  {question.category}
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="text-xs font-mono font-bold text-dark-400 dark:text-dark-500">{question.id}</span>
+                <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full font-medium ${catBadge.className}`}>
+                  {catBadge.icon}
+                  <span>{catBadge.label}</span>
                 </span>
-                <span className="text-xs text-dark-500 dark:text-dark-400">
-                  Difficulty: {'★'.repeat(question.difficulty)}{'☆'.repeat(3 - question.difficulty)}
+                <span className="text-xs text-dark-500 dark:text-dark-400 font-medium">
+                  Difficulty: <span className="text-amber-500 tracking-wider">{'★'.repeat(question.difficulty)}</span>
+                  <span className="text-dark-300 dark:text-dark-600">{'☆'.repeat(3 - question.difficulty)}</span>
                 </span>
+                {question.diagram && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+                    <Layers className="w-3 h-3" />
+                    <span>Diagram Included</span>
+                  </span>
+                )}
               </div>
-              <p className="text-sm font-medium text-dark-800 dark:text-dark-200 mb-2">{question.prompt}</p>
+
+              <p className="text-sm font-semibold text-dark-900 dark:text-white leading-relaxed mb-2">
+                {question.prompt}
+              </p>
+
+              {/* Collapsed Outline preview or Expanded Detailed View */}
               {question.answerOutline && (
-                <div className="text-xs text-dark-500 dark:text-dark-400 mt-2 p-2 bg-dark-50 dark:bg-dark-800/50 rounded">
-                  <strong>Answer Outline:</strong> {question.answerOutline.slice(0, 200)}{question.answerOutline.length > 200 ? '...' : ''}
+                <div className="mt-2.5">
+                  {!isExpanded ? (
+                    <div className="text-xs text-dark-600 dark:text-dark-300 p-2.5 bg-dark-50 dark:bg-dark-900/40 rounded-lg border border-dark-100 dark:border-dark-800/80">
+                      <div className="flex items-center justify-between mb-1">
+                        <strong className="text-dark-800 dark:text-dark-200">Answer Outline:</strong>
+                        <button
+                          type="button"
+                          onClick={() => setIsExpanded(true)}
+                          className="text-[11px] text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-0.5 font-medium cursor-pointer"
+                        >
+                          View Full Outline & Diagram
+                          <ChevronRight className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <p className="line-clamp-2 text-dark-600 dark:text-dark-400">
+                        {question.answerOutline}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 p-3.5 bg-dark-50/80 dark:bg-dark-900/60 rounded-xl border border-dark-200 dark:border-dark-700/80 animate-fade-in">
+                      <div className="flex items-center justify-between border-b border-dark-200/80 dark:border-dark-700/80 pb-2">
+                        <span className="text-xs font-bold text-dark-800 dark:text-dark-200 flex items-center gap-1.5">
+                          <Check className="w-3.5 h-3.5 text-primary-500" />
+                          Model Answer Structure & Evaluation Guide
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleCopy}
+                            className="text-xs text-dark-500 hover:text-dark-800 dark:text-dark-400 dark:hover:text-dark-200 flex items-center gap-1 py-0.5 px-2 rounded hover:bg-dark-200/60 dark:hover:bg-dark-800 cursor-pointer"
+                          >
+                            {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                            <span>{copied ? 'Copied' : 'Copy'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsExpanded(false)}
+                            className="text-xs text-primary-600 dark:text-primary-400 hover:underline font-medium cursor-pointer"
+                          >
+                            Collapse
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-dark-700 dark:text-dark-300 whitespace-pre-line leading-relaxed space-y-2">
+                        {question.answerOutline}
+                      </div>
+
+                      {/* Architecture Diagram if available */}
+                      {question.diagram && (
+                        <ArchitectureDiagram
+                          diagram={question.diagram}
+                          title={`${question.prompt.slice(0, 55)}...`}
+                          category={question.category}
+                        />
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
+
               {question.requirementIds && question.requirementIds.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
+                <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                  <span className="text-[11px] text-dark-400 dark:text-dark-500 font-medium">Mapped to:</span>
                   {question.requirementIds.map((rid: string) => (
-                    <span key={rid} className="badge text-xs bg-dark-100 text-dark-600 dark:bg-dark-800 dark:text-dark-300">{rid}</span>
+                    <span key={rid} className="badge text-[10px] font-mono bg-dark-100 text-dark-600 dark:bg-dark-800 dark:text-dark-300">
+                      {rid}
+                    </span>
                   ))}
                 </div>
               )}
             </div>
+
             <div className="flex items-center gap-1">
-              <button onClick={onPin} className={`p-1 rounded transition-colors ${isPinned ? 'text-primary-500 bg-primary-100 dark:bg-primary-900/30' : 'text-dark-400 hover:text-primary-500'}`} title="Pin this question">
-                {isPinned ? <BookOpen className="w-4 h-4" /> : <BookOpen className="w-4 h-4 opacity-50" />}
+              <button
+                onClick={onPin}
+                className={`p-1.5 rounded-md transition-colors ${isPinned ? 'text-primary-600 bg-primary-100 dark:bg-primary-950/60 dark:text-primary-300' : 'text-dark-400 hover:text-primary-500'}`}
+                title={isPinned ? 'Unpin question' : 'Pin question'}
+              >
+                <BookOpen className="w-4 h-4" />
               </button>
-              <button onClick={() => setIsEditing(true)} className="p-1 text-dark-400 hover:text-dark-600 dark:hover:text-dark-300 rounded">
+              <button
+                onClick={() => setIsEditing(true)}
+                className="p-1.5 text-dark-400 hover:text-dark-600 dark:hover:text-dark-200 hover:bg-dark-100 dark:hover:bg-dark-800 rounded-md"
+                title="Edit question"
+              >
                 <Edit3 className="w-4 h-4" />
               </button>
               <select
                 onChange={(e) => { if (e.target.value) { onMove(e.target.value); e.target.value = ''; } }}
-                className="text-xs border border-dark-200 dark:border-dark-700 rounded p-1"
+                className="text-xs border border-dark-200 dark:border-dark-700 bg-white dark:bg-dark-800 rounded-md p-1 text-dark-700 dark:text-dark-300"
                 defaultValue=""
+                title="Move question to another category"
               >
                 <option value="" disabled>Move to...</option>
                 <option value="technical">Technical</option>
@@ -213,7 +400,11 @@ function QuestionEditor({ question, requirements, onUpdate, onDelete, onMove, on
                 <option value="system-design">System Design</option>
                 <option value="company-fit">Company Fit</option>
               </select>
-              <button onClick={onDelete} className="p-1 text-dark-400 hover:text-red-500 rounded">
+              <button
+                onClick={onDelete}
+                className="p-1.5 text-dark-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md"
+                title="Delete question"
+              >
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>
@@ -303,8 +494,11 @@ export default function KitPage() {
   });
   const [newRequirement, setNewRequirement] = useState<{text: string; kind: 'technical' | 'behavioural' | 'domain'; priority: 'must' | 'nice'}>({ text: '', kind: 'technical', priority: 'must' });
   const [showNewRequirement, setShowNewRequirement] = useState(false);
-  const [newQuestion, setNewQuestion] = useState<{prompt: string; answerOutline: string; category: 'technical' | 'behavioural' | 'system-design' | 'company-fit'; difficulty: 1 | 2 | 3; requirementIds: string[]}>({ prompt: '', answerOutline: '', category: 'technical', difficulty: 2, requirementIds: [] });
+  const [newQuestion, setNewQuestion] = useState<{prompt: string; answerOutline: string; category: 'technical' | 'behavioural' | 'system-design' | 'company-fit'; difficulty: 1 | 2 | 3; requirementIds: string[]; diagram: string}>({ prompt: '', answerOutline: '', category: 'technical', difficulty: 2, requirementIds: [], diagram: '' });
   const [showNewQuestion, setShowNewQuestion] = useState(false);
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<'all' | 'technical' | 'behavioural' | 'system-design' | 'company-fit'>('all');
+  const [questionSearch, setQuestionSearch] = useState('');
+  const [generatingCategory, setGeneratingCategory] = useState<string | null>(null);
   const [newFlashcard, setNewFlashcard] = useState<{front: string; back: string; requirementIds: string[]}>({ front: '', back: '', requirementIds: [] });
   const [showNewFlashcard, setShowNewFlashcard] = useState(false);
 
@@ -331,14 +525,18 @@ export default function KitPage() {
   const handleRegenerate = async (section: string) => {
     if (!currentKit) return;
     setGenerating(true);
+    setGeneratingCategory(section);
     try {
-      await kitsApi.regenerateSection(currentKit._id, section);
-      toast.success(`Regenerating ${section}...`);
-      setTimeout(loadKit, 2000);
+      const res = await kitsApi.regenerateSection(currentKit._id, section);
+      if (res.data?.kit) {
+        setKit(res.data.kit);
+      }
+      toast.success(res.data?.message || `Generated ${section} questions!`);
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Failed to regenerate');
+      toast.error(error.response?.data?.error || 'Failed to generate');
     } finally {
       setGenerating(false);
+      setGeneratingCategory(null);
     }
   };
 
@@ -366,8 +564,17 @@ export default function KitPage() {
 
   const handleAddQuestion = () => {
     if (!newQuestion.prompt.trim()) return;
-    addQuestion({ id: `q${Date.now()}`, ...newQuestion });
-    setNewQuestion({ prompt: '', answerOutline: '', category: 'technical', difficulty: 2, requirementIds: [] });
+    addQuestion({
+      id: `q${Date.now()}`,
+      prompt: newQuestion.prompt.trim(),
+      answerOutline: newQuestion.answerOutline.trim(),
+      category: newQuestion.category,
+      difficulty: newQuestion.difficulty,
+      requirementIds: newQuestion.requirementIds,
+      diagram: newQuestion.diagram.trim() || undefined,
+      diagramType: newQuestion.diagram.trim() ? 'architecture' : undefined
+    });
+    setNewQuestion({ prompt: '', answerOutline: '', category: 'technical', difficulty: 2, requirementIds: [], diagram: '' });
     setShowNewQuestion(false);
   };
 
@@ -650,74 +857,337 @@ export default function KitPage() {
         )}
 
         {activeTab === 'questions' && (
-          <div className="card p-6 animate-fade-in">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-dark-900 dark:text-white">Questions</h2>
-              <div className="flex gap-2">
-                {['technical', 'behavioural', 'system-design', 'company-fit'].map(cat => (
-                  <button key={cat} onClick={() => handleRegenerate(cat)} className="btn-ghost text-sm" title={`Regenerate ${cat}`}>
-                    <RefreshCw className="w-3 h-3" />
-                    <span className="hidden sm:inline ml-1">{cat}</span>
-                  </button>
-                ))}
-                <button onClick={() => setShowNewQuestion(!showNewQuestion)} className="btn-primary text-sm">
-                  <Plus className="w-4 h-4 mr-1" />
+          <div className="card p-6 animate-fade-in space-y-6">
+            {/* Header & Primary Actions */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-dark-100 dark:border-dark-800">
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <h2 className="text-xl font-bold text-dark-900 dark:text-white">Interview Questions & Architecture</h2>
+                  <span className="badge font-mono text-xs bg-primary-100 dark:bg-primary-950/60 text-primary-700 dark:text-primary-300 font-bold px-2 py-0.5">
+                    {currentKit.questions.length} Total
+                  </span>
+                </div>
+                <p className="text-xs text-dark-500 dark:text-dark-400 mt-1">
+                  High-yield questions with model answers, rubrics, and interactive ASCII architecture diagrams.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleRegenerate('more-questions')}
+                  disabled={isGenerating}
+                  className="btn-primary text-sm flex items-center gap-1.5 shadow-sm"
+                  title="Generate high-yield questions across Technical, Behavioural, System Design, and Company Fit"
+                >
+                  {isGenerating && (!generatingCategory || generatingCategory === 'more-questions') ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  ) : (
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                  )}
+                  <span>Generate More (All Categories)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowNewQuestion(!showNewQuestion)}
+                  className="btn-ghost border border-dark-200 dark:border-dark-700 text-sm flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4 mr-0.5" />
                   Add Question
                 </button>
               </div>
             </div>
+
+            {/* Category Quick Generators Toolbar */}
+            <div className="p-3 bg-dark-50/70 dark:bg-dark-900/40 rounded-xl border border-dark-200/80 dark:border-dark-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <span className="text-xs font-semibold text-dark-600 dark:text-dark-400 flex items-center gap-1.5 shrink-0">
+                <RefreshCw className="w-3.5 h-3.5 text-primary-500" />
+                Generate More By Category:
+              </span>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleRegenerate('technical')}
+                  disabled={isGenerating}
+                  className="px-2.5 py-1 text-xs font-medium rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 hover:bg-purple-100 dark:hover:bg-purple-900/60 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {generatingCategory === 'technical' ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Cpu className="w-3 h-3" />
+                  )}
+                  <span>+3 Technical</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleRegenerate('behavioural')}
+                  disabled={isGenerating}
+                  className="px-2.5 py-1 text-xs font-medium rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {generatingCategory === 'behavioural' ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Users className="w-3 h-3" />
+                  )}
+                  <span>+3 Behavioural (STAR)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleRegenerate('system-design')}
+                  disabled={isGenerating}
+                  className="px-2.5 py-1 text-xs font-medium rounded-lg bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800/60 hover:bg-orange-100 dark:hover:bg-orange-900/60 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {generatingCategory === 'system-design' ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Layers className="w-3 h-3" />
+                  )}
+                  <span>+3 System Design (Diagrams)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleRegenerate('company-fit')}
+                  disabled={isGenerating}
+                  className="px-2.5 py-1 text-xs font-medium rounded-lg bg-cyan-50 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-800/60 hover:bg-cyan-100 dark:hover:bg-cyan-900/60 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {generatingCategory === 'company-fit' ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Building2 className="w-3 h-3" />
+                  )}
+                  <span>+2 Company Fit</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Chips & Search Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              {/* Category Filter Chips */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {[
+                  { id: 'all', label: 'All', count: currentKit.questions.length },
+                  { id: 'technical', label: 'Technical', count: currentKit.questions.filter((q: any) => q.category === 'technical').length },
+                  { id: 'behavioural', label: 'Behavioural', count: currentKit.questions.filter((q: any) => q.category === 'behavioural').length },
+                  {
+                    id: 'system-design',
+                    label: 'System Design',
+                    count: currentKit.questions.filter((q: any) => q.category === 'system-design').length,
+                    diagramCount: currentKit.questions.filter((q: any) => q.category === 'system-design' && q.diagram).length
+                  },
+                  { id: 'company-fit', label: 'Company Fit', count: currentKit.questions.filter((q: any) => q.category === 'company-fit').length },
+                ].map((item) => {
+                  const isActive = selectedCategoryFilter === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setSelectedCategoryFilter(item.id as any)}
+                      className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
+                        isActive
+                          ? 'bg-primary-600 text-white shadow-xs'
+                          : 'bg-dark-100 dark:bg-dark-800 text-dark-600 dark:text-dark-300 hover:bg-dark-200 dark:hover:bg-dark-700'
+                      }`}
+                    >
+                      <span>{item.label}</span>
+                      <span className={`text-[11px] px-1.5 py-0.2 rounded-full ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-dark-200 dark:bg-dark-700 text-dark-500 dark:text-dark-400'
+                      }`}>
+                        {item.count}
+                      </span>
+                      {item.diagramCount && item.diagramCount > 0 ? (
+                        <span className="text-[10px] text-amber-300 font-semibold" title={`${item.diagramCount} with diagrams`}>
+                          📐
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Search filter input */}
+              <div className="relative w-full sm:w-64">
+                <Search className="w-3.5 h-3.5 text-dark-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={questionSearch}
+                  onChange={(e) => setQuestionSearch(e.target.value)}
+                  placeholder="Search questions or req IDs..."
+                  className="input text-xs pl-8 pr-7 py-1.5 w-full"
+                />
+                {questionSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setQuestionSearch('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-dark-400 hover:text-dark-600 dark:hover:text-dark-200 text-xs"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* New Question Creator Modal / Box */}
             {showNewQuestion && (
-              <div className="mb-4 p-4 bg-dark-50 dark:bg-dark-800/50 rounded-lg space-y-3">
+              <div className="p-4 bg-primary-50/40 dark:bg-dark-800/80 rounded-xl border border-primary-200 dark:border-primary-900/40 space-y-3 animate-fade-in shadow-xs">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-primary-800 dark:text-primary-300">
+                    Create New Question
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewQuestion(false)}
+                    className="text-xs text-dark-400 hover:text-dark-600 dark:hover:text-dark-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
+
                 <textarea
                   value={newQuestion.prompt}
                   onChange={(e) => setNewQuestion({ ...newQuestion, prompt: e.target.value })}
                   className="textarea text-sm"
-                  placeholder="Question prompt..."
+                  placeholder="Interview prompt (e.g. Design an asynchronous notifications service...)"
                   rows={2}
                 />
                 <textarea
                   value={newQuestion.answerOutline}
                   onChange={(e) => setNewQuestion({ ...newQuestion, answerOutline: e.target.value })}
                   className="textarea text-sm"
-                  placeholder="Answer outline..."
-                  rows={2}
+                  placeholder="Answer outline / evaluation rubric (STAR method, system components, trade-offs...)"
+                  rows={3}
                 />
-                <div className="flex gap-2">
-                  <select value={newQuestion.category} onChange={(e) => setNewQuestion({ ...newQuestion, category: e.target.value as 'technical' | 'behavioural' | 'system-design' | 'company-fit' })} className="input text-sm w-40">
-                    <option value="technical">Technical</option>
-                    <option value="behavioural">Behavioural</option>
-                    <option value="system-design">System Design</option>
-                    <option value="company-fit">Company Fit</option>
-                  </select>
-                  <select value={newQuestion.difficulty} onChange={(e) => setNewQuestion({ ...newQuestion, difficulty: parseInt(e.target.value) as 1 | 2 | 3 })} className="input text-sm w-28">
-                    <option value={1}>Easy</option>
-                    <option value={2}>Medium</option>
-                    <option value={3}>Hard</option>
-                  </select>
-                  <button onClick={handleAddQuestion} className="btn-primary text-sm py-1 px-3">Add</button>
-                  <button onClick={() => setShowNewQuestion(false)} className="btn-ghost text-sm py-1 px-3">Cancel</button>
+
+                <div>
+                  <label className="text-xs font-medium text-dark-600 dark:text-dark-400 mb-1 block">
+                    Architecture Diagram (ASCII or Text Blueprint - Optional)
+                  </label>
+                  <textarea
+                    value={newQuestion.diagram}
+                    onChange={(e) => setNewQuestion({ ...newQuestion, diagram: e.target.value })}
+                    className="textarea text-xs font-mono"
+                    placeholder={`[Client] -> [Load Balancer] -> [API Gateway]\n                     |\n        +------------+------------+\n        |                         |\n  [Worker Service]         [Redis Cache]\n        |\n   [Database]`}
+                    rows={4}
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <div>
+                    <label className="text-xs text-dark-500 mb-1 block">Category</label>
+                    <select
+                      value={newQuestion.category}
+                      onChange={(e) => setNewQuestion({ ...newQuestion, category: e.target.value as any })}
+                      className="input text-sm w-44"
+                    >
+                      <option value="technical">Technical</option>
+                      <option value="behavioural">Behavioural</option>
+                      <option value="system-design">System Design</option>
+                      <option value="company-fit">Company Fit</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-dark-500 mb-1 block">Difficulty</label>
+                    <select
+                      value={newQuestion.difficulty}
+                      onChange={(e) => setNewQuestion({ ...newQuestion, difficulty: parseInt(e.target.value) as 1 | 2 | 3 })}
+                      className="input text-sm w-32"
+                    >
+                      <option value={1}>★☆☆ Easy</option>
+                      <option value={2}>★★☆ Medium</option>
+                      <option value={3}>★★★ Hard</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2 ml-auto pt-5">
+                    <button
+                      type="button"
+                      onClick={handleAddQuestion}
+                      className="btn-primary text-sm py-1.5 px-4"
+                    >
+                      Add Question
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowNewQuestion(false)}
+                      className="btn-ghost text-sm py-1.5 px-3"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
-            <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEndQuestions}>
-              <SortableContext items={currentKit.questions.map((q: any) => q.id)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-3">
-                  {currentKit.questions.map((q: any) => (
-                    <SortableItem key={q.id} id={q.id}>
-                      <QuestionEditor
-                        question={q}
-                        requirements={currentKit.role.requirements}
-                        onUpdate={(updates) => updateQuestion(q.id, updates)}
-                        onDelete={() => deleteQuestion(q.id)}
-                        onMove={(cat) => moveQuestion(q.id, cat as any)}
-                        onPin={() => pinQuestion(q.id)}
-                        isPinned={q.status === 'pinned'}
-                      />
-                    </SortableItem>
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
+
+            {/* Questions List (Filtered & Searchable) */}
+            {(() => {
+              const filteredQuestions = currentKit.questions.filter((q: any) => {
+                const matchesCategory = selectedCategoryFilter === 'all' || q.category === selectedCategoryFilter;
+                const matchesSearch = !questionSearch.trim() ||
+                  q.prompt.toLowerCase().includes(questionSearch.toLowerCase()) ||
+                  (q.answerOutline && q.answerOutline.toLowerCase().includes(questionSearch.toLowerCase())) ||
+                  (q.requirementIds && q.requirementIds.some((r: string) => r.toLowerCase().includes(questionSearch.toLowerCase())));
+                return matchesCategory && matchesSearch;
+              });
+
+              if (filteredQuestions.length === 0) {
+                return (
+                  <div className="text-center py-12 px-4 rounded-xl border border-dashed border-dark-300 dark:border-dark-700">
+                    <Layers className="w-10 h-10 text-dark-300 dark:text-dark-600 mx-auto mb-3" />
+                    <p className="text-sm font-semibold text-dark-700 dark:text-dark-300">
+                      No questions match your current filter
+                    </p>
+                    <p className="text-xs text-dark-500 mt-1 max-w-sm mx-auto">
+                      {selectedCategoryFilter !== 'all'
+                        ? `You don't have questions under ${selectedCategoryFilter} yet. Generate more or clear filters.`
+                        : 'No questions available.'}
+                    </p>
+                    <div className="mt-4 flex justify-center gap-2">
+                      {selectedCategoryFilter !== 'all' && (
+                        <button
+                          type="button"
+                          onClick={() => handleRegenerate(selectedCategoryFilter)}
+                          className="btn-primary text-xs py-1.5 px-3"
+                        >
+                          Generate {selectedCategoryFilter} Questions
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedCategoryFilter('all'); setQuestionSearch(''); }}
+                        className="btn-ghost text-xs py-1.5 px-3"
+                      >
+                        Reset Filter
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEndQuestions}>
+                  <SortableContext items={filteredQuestions.map((q: any) => q.id)} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-3">
+                      {filteredQuestions.map((q: any) => (
+                        <SortableItem key={q.id} id={q.id}>
+                          <QuestionEditor
+                            question={q}
+                            requirements={currentKit.role.requirements}
+                            onUpdate={(updates) => updateQuestion(q.id, updates)}
+                            onDelete={() => deleteQuestion(q.id)}
+                            onMove={(cat) => moveQuestion(q.id, cat as any)}
+                            onPin={() => pinQuestion(q.id)}
+                            isPinned={q.status === 'pinned'}
+                          />
+                        </SortableItem>
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              );
+            })()}
+
             {currentKit.questions.length === 0 && (
               <p className="text-center text-dark-500 dark:text-dark-400 py-8">No questions generated yet</p>
             )}

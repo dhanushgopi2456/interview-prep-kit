@@ -9,7 +9,25 @@ const api = axios.create({
 });
 
 api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => config,
+  (config: InternalAxiosRequestConfig) => {
+    if (typeof window !== 'undefined') {
+      let token = localStorage.getItem('auth_token');
+      if (!token) {
+        try {
+          const authStorage = localStorage.getItem('auth-storage');
+          if (authStorage) {
+            const parsed = JSON.parse(authStorage);
+            token = parsed?.state?.token;
+          }
+        } catch {}
+      }
+      if (token) {
+        config.headers.set('Authorization', `Bearer ${token}`);
+        config.headers.set('x-auth-token', token);
+      }
+    }
+    return config;
+  },
   (error) => Promise.reject(error)
 );
 
@@ -18,7 +36,19 @@ api.interceptors.response.use(
   (error: AxiosError) => {
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+        const url = error.config?.url || '';
+        const isAuthCheck = url.includes('/auth/me');
+        const pathname = window.location.pathname;
+        const isPublicPage = pathname === '/login' || pathname === '/register' || pathname === '/';
+
+        localStorage.removeItem('auth_token');
+
+        if (!isAuthCheck && !isPublicPage) {
+          // Avoid hard reloading if already on login
+          if (pathname !== '/login') {
+            window.location.href = '/login';
+          }
+        }
       }
     }
     return Promise.reject(error);
@@ -33,6 +63,7 @@ export interface User {
 
 export interface AuthResponse {
   user: User;
+  token?: string;
 }
 
 export interface Kit {
@@ -89,6 +120,9 @@ export interface Question {
   answerOutline: string;
   difficulty: 1 | 2 | 3;
   status?: 'generated' | 'edited' | 'pinned';
+  diagram?: string;
+  diagramType?: 'architecture' | 'flowchart' | 'sequence' | 'ascii';
+  keyRubric?: string[];
 }
 
 export interface Flashcard {
@@ -137,8 +171,11 @@ export const kitsApi = {
   
   delete: (id: string) => api.delete(`/kits/${id}`),
   
-  regenerateSection: (id: string, section: string) =>
-    api.post<{ kit: Kit }>(`/kits/${id}/regenerate-section`, { section }),
+  regenerateSection: (id: string, section: string, options?: { count?: number; category?: string }) =>
+    api.post<{ kit: Kit; message?: string; addedCount?: number }>(`/kits/${id}/regenerate-section`, { section, ...options }),
+  
+  generateMoreQuestions: (id: string, category?: string, count?: number) =>
+    api.post<{ kit: Kit; message?: string; addedCount?: number }>(`/kits/${id}/regenerate-section`, { section: category || 'more-questions', count: count || 4 }),
   
   generate: (id: string, jobDescription: string) =>
     api.post<{ kit: Kit }>(`/generation/generate/${id}`, { jobDescription })

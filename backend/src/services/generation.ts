@@ -1,14 +1,21 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { Kit, IKit, IRequirement, IQuestion, IFlashcard, IScheduleDay } from '../models/Kit';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 const GENERATION_TIMEOUT = 60000;
 const MAX_PASSES = 3;
 
 function generateId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+async function generateWithGemini(prompt: string, content: string): Promise<string> {
+  const result = await ai.models.generateContent({
+    model: 'gemini-2.5-flash',
+    contents: `${prompt}\n\n${content}`
+  });
+  return result.text || '';
 }
 
 function cleanJsonResponse(text: string): any {
@@ -37,13 +44,7 @@ export async function extractRequirements(jobDescription: string): Promise<IRequ
 
 Return ONLY a JSON array of requirements.`;
 
-  const result = await model.generateContent([
-    prompt,
-    `Job Description:\n${jobDescription}`
-  ]);
-  
-  const response = await result.response;
-  const text = response.text();
+  const text = await generateWithGemini(prompt, `Job Description:\n${jobDescription}`);
   const requirements = cleanJsonResponse(text);
   
   return Array.isArray(requirements) ? requirements.map((r: any, i: number) => ({
@@ -65,9 +66,7 @@ Return ONLY JSON with: summary (2-3 sentences), whatTheyDo (detailed paragraph),
 
   const content = `Company: ${companyName}\n\nHomepage:\n${homepageText}\n\nHiring Pages:\n${hiringPagesText.join('\n\n')}`;
   
-  const result = await model.generateContent([prompt, content]);
-  const response = await result.response;
-  const text = response.text();
+  const text = await generateWithGemini(prompt, content);
   
   const parsed = cleanJsonResponse(text);
   return {
@@ -87,9 +86,7 @@ Return ONLY JSON with: title, seniority (junior/mid/senior/lead/principal), resp
 
   const content = `Job Description:\n${jobDescription}\n\nRequirements:\n${requirements.map(r => `- ${r.text} (${r.kind}, ${r.priority})`).join('\n')}\n\nCompany: ${companyBrief.whatTheyDo}`;
   
-  const result = await model.generateContent([prompt, content]);
-  const response = await result.response;
-  const text = response.text();
+  const text = await generateWithGemini(prompt, content);
   
   return cleanJsonResponse(text);
 }
@@ -113,9 +110,7 @@ Return ONLY JSON array of questions with: id, requirementIds (array), category, 
   const reqText = requirements.map(r => `${r.id}: ${r.text} (${r.kind}, ${r.priority})`).join('\n');
   const content = `Category: ${category}\nRequirements:\n${reqText}\n\nCompany: ${context.companyBrief.whatTheyDo}\nHiring Process: ${context.hiringProcess || 'Not specified'}\nJob Description: ${context.jd}`;
 
-  const result = await model.generateContent([prompt, content]);
-  const response = await result.response;
-  const text = response.text();
+  const text = await generateWithGemini(prompt, content);
   
   const questions = cleanJsonResponse(text);
   return Array.isArray(questions) ? questions.map((q: any) => ({
@@ -138,9 +133,7 @@ Return ONLY JSON array.`;
 
   const content = `Requirements:\n${requirements.map(r => `${r.id}: ${r.text}`).join('\n')}\n\nQuestions:\n${questions.map(q => `${q.id}: ${q.prompt}`).join('\n')}`;
 
-  const result = await model.generateContent([prompt, content]);
-  const response = await result.response;
-  const text = response.text();
+  const text = await generateWithGemini(prompt, content);
   
   const cards = cleanJsonResponse(text);
   return Array.isArray(cards) ? cards.map((c: any) => ({

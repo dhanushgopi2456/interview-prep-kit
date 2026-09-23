@@ -8,6 +8,10 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Interview Prep Kit',
   description: 'Turn job descriptions into personalized interview preparation kits',
+  openGraph: {
+    title: 'Interview Prep Kit',
+    description: 'Turn job descriptions into personalized interview preparation kits',
+  }
 };
 
 export default function RootLayout({
