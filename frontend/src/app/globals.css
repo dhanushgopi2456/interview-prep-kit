@@ -6,13 +6,23 @@
   --foreground-rgb: 15, 23, 42;
   --background-start-rgb: 248, 250, 252;
   --background-end-rgb: 226, 232, 240;
+  color-scheme: light;
+}
+
+html.dark,
+.dark {
+  --foreground-rgb: 248, 250, 252;
+  --background-start-rgb: 15, 23, 42;
+  --background-end-rgb: 30, 41, 59;
+  color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.light) {
     --foreground-rgb: 248, 250, 252;
     --background-start-rgb: 15, 23, 42;
     --background-end-rgb: 30, 41, 59;
+    color-scheme: dark;
   }
 }
 
@@ -45,9 +55,14 @@ body {
   }
   
   .glass {
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.75);
     backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+
+  .dark .glass {
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
   
   .glass-dark {

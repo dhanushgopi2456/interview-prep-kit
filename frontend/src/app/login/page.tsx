@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'react-hot-toast';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   Mail,
   Lock,
@@ -142,6 +143,10 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen relative flex items-center justify-center p-4 py-12">
       <AnimatedBackground />
+
+      <div className="absolute top-4 right-4 z-20">
+        <ThemeToggle />
+      </div>
 
       <div className="w-full max-w-lg relative z-10 animate-slide-up">
         <div className="card p-6 sm:p-8 shadow-xl">

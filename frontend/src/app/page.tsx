@@ -1,17 +1,30 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
-import { ArrowRight, Briefcase, Zap, Shield, Users, Code } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import {
+  ArrowRight,
+  Briefcase,
+  Zap,
+  Shield,
+  Users,
+  Code,
+  LogIn,
+  LogOut
+} from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 export default function HomePage() {
   const router = useRouter();
-  const { isAuthenticated, checkAuth } = useAuthStore();
+  const { isAuthenticated, checkAuth, logout } = useAuthStore();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     checkAuth();
   }, [checkAuth]);
 
@@ -37,21 +50,34 @@ export default function HomePage() {
               </div>
               <span className="text-xl font-bold text-dark-900 dark:text-white">Interview Prep Kit</span>
             </Link>
-            <div className="flex items-center gap-4">
-              {isAuthenticated ? (
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+              {mounted && isAuthenticated ? (
                 <>
                   <Link href="/dashboard" className="btn-primary flex items-center gap-2">
                     <Briefcase className="w-4 h-4" />
                     <span>Go to Dashboard</span>
                   </Link>
+                  <button
+                    onClick={async () => {
+                      await logout();
+                      toast.success('Logged out successfully');
+                    }}
+                    className="btn-ghost text-sm text-dark-600 dark:text-dark-300 hover:text-dark-900 dark:hover:text-white flex items-center gap-1.5 px-3 py-2"
+                    title="Sign Out"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span className="hidden sm:inline">Sign Out</span>
+                  </button>
                 </>
               ) : (
                 <>
-                  <Link href="/login" className="btn-ghost text-dark-600 dark:text-dark-300">
-                    Sign In
+                  <Link href="/login" className="btn-primary flex items-center gap-1.5 px-4 py-2">
+                    <LogIn className="w-4 h-4" />
+                    <span>Login</span>
                   </Link>
-                  <Link href="/register" className="btn-primary">
-                    Get Started
+                  <Link href="/register" className="btn-ghost text-dark-600 dark:text-dark-300 hidden sm:inline-flex">
+                    Register
                   </Link>
                 </>
               )}
@@ -75,9 +101,32 @@ export default function HomePage() {
               with questions, flashcards, and a day-by-day study schedule.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href={isAuthenticated ? "/dashboard" : "/register"} className="btn-primary text-lg px-8 py-3 w-full sm:w-auto">
-                {isAuthenticated ? "Open Dashboard" : "Start Free - No Credit Card Required"}
-              </Link>
+              {mounted && isAuthenticated ? (
+                <Link
+                  href="/dashboard"
+                  className="btn-primary text-lg px-8 py-3 w-full sm:w-auto flex items-center justify-center gap-2 shadow-lg shadow-primary-500/20"
+                >
+                  <Briefcase className="w-5 h-5" />
+                  <span>Open Dashboard</span>
+                </Link>
+              ) : (
+                <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                  <Link
+                    href="/login"
+                    className="btn-primary text-lg px-8 py-3 w-full sm:w-auto flex items-center justify-center gap-2 shadow-lg shadow-primary-500/20"
+                  >
+                    <LogIn className="w-5 h-5" />
+                    <span>Login</span>
+                    <ArrowRight className="w-5 h-5" />
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="btn-ghost border border-dark-200 dark:border-dark-700 text-lg px-6 py-3 w-full sm:w-auto text-dark-700 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-800"
+                  >
+                    Register
+                  </Link>
+                </div>
+              )}
               <Link href="#features" className="btn-secondary text-lg px-8 py-3 w-full sm:w-auto">
                 See How It Works
               </Link>
@@ -119,8 +168,21 @@ export default function HomePage() {
               Join thousands of candidates who use Interview Prep Kit to walk into interviews
               confident and prepared. Start building your kit in minutes.
             </p>
-            <Link href={isAuthenticated ? "/dashboard" : "/register"} className="btn-primary text-lg px-10 py-3 inline-block">
-              {isAuthenticated ? "Go to Dashboard" : "Create Your First Kit"}
+            <Link
+              href={mounted && isAuthenticated ? "/dashboard" : "/login"}
+              className="btn-primary text-lg px-10 py-3 inline-flex items-center justify-center gap-2 shadow-lg shadow-primary-500/20"
+            >
+              {mounted && isAuthenticated ? (
+                <>
+                  <Briefcase className="w-5 h-5" />
+                  <span>Open Dashboard</span>
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-5 h-5" />
+                  <span>Login to Start</span>
+                </>
+              )}
             </Link>
           </div>
         </section>

@@ -9,6 +9,7 @@ import { kitsApi, Kit } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { ArchitectureDiagram } from '@/components/ArchitectureDiagram';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   ArrowLeft,
   Briefcase,
@@ -658,6 +659,7 @@ export default function KitPage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <ThemeToggle />
               <Link href={`/kit/${currentKit._id}/practice`} className="btn-primary text-sm">
                 <Play className="w-4 h-4 mr-1" />
                 Practice

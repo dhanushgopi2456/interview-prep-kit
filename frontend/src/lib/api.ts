@@ -1,7 +1,17 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
+const getBaseURL = () => {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    const raw = process.env.NEXT_PUBLIC_API_URL.trim();
+    if (raw) {
+      return raw.endsWith('/api') ? raw : `${raw.replace(/\/$/, '')}/api`;
+    }
+  }
+  return '/api/backend';
+};
+
 const api = axios.create({
-  baseURL: '/api/backend',
+  baseURL: getBaseURL(),
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json'

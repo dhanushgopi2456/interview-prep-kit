@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { kitsApi, CreateKitInput } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { ArrowLeft, Briefcase, Loader2, FileText, Globe, Calendar } from 'lucide-react';
 
 export default function CreateKitPage() {
@@ -68,11 +69,14 @@ export default function CreateKitPage() {
               <ArrowLeft className="w-5 h-5 text-dark-500" />
               <span className="font-medium text-dark-700 dark:text-dark-300">Back to Dashboard</span>
             </Link>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
-                <Briefcase className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
+                  <Briefcase className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-bold text-dark-900 dark:text-white hidden sm:inline">Interview Prep Kit</span>
               </div>
-              <span className="text-xl font-bold text-dark-900 dark:text-white">Interview Prep Kit</span>
+              <ThemeToggle />
             </div>
           </div>
         </div>

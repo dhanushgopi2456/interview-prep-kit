@@ -5,7 +5,7 @@ import { generateKitContent } from '@/lib/generate';
 import { generateImportantQuestions } from '@/lib/questionGenerator';
 import { Kit } from '@/lib/api';
 
-function getAuthenticatedUser(req: NextRequest): { userId: string; email: string; name: string } {
+function getAuthenticatedUser(req: NextRequest): { userId: string; email: string; name: string } | null {
   // 1. Authorization header (Bearer token)
   const authHeader = req.headers.get('authorization') || req.headers.get('Authorization');
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -30,13 +30,7 @@ function getAuthenticatedUser(req: NextRequest): { userId: string; email: string
     if (verified) return verified;
   }
 
-  // 4. Default demo user fallback so kits and features never fail with 401
-  const demoUser = usersStore.get('demo@interviewprepkit.com');
-  if (demoUser) {
-    return { userId: demoUser.id, email: demoUser.email, name: demoUser.name };
-  }
-
-  return { userId: 'user_demo_1', email: 'demo@interviewprepkit.com', name: 'Demo User' };
+  return null;
 }
 
 function jsonResponse(data: any, status = 200, cookieToSet?: string, clearCookie?: boolean): NextResponse {

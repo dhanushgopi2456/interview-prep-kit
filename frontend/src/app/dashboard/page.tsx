@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { kitsApi, Kit } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   Plus,
   Briefcase,
@@ -75,6 +76,10 @@ export default function DashboardPage() {
         setIsLoading(true);
         if (!isAuthenticated) {
           await checkAuth();
+        }
+        if (!useAuthStore.getState().isAuthenticated) {
+          if (isMounted) router.replace('/login');
+          return;
         }
         if (isMounted) {
           await loadKits();
@@ -219,6 +224,7 @@ export default function DashboardPage() {
                   Interview Prep Kit
                 </span>
               </Link>
+              <ThemeToggle />
             </div>
           </div>
         </nav>
@@ -291,7 +297,8 @@ export default function DashboardPage() {
             </div>
 
             {/* User */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
 
               {user?.name && (
                 <span className="text-sm text-dark-500 dark:text-dark-400 hidden sm:block">

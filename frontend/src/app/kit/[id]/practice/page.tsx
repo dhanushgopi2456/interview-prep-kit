@@ -8,6 +8,7 @@ import { useKitStore } from '@/stores/kitStore';
 import { kitsApi, Flashcard } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { ArrowLeft, RotateCcw, ChevronLeft, ChevronRight, Check, X, Brain, Target, TrendingUp, ArrowRight } from 'lucide-react';
 
 interface FlashcardProgress {
@@ -162,10 +163,13 @@ export default function PracticePage() {
               <div className="h-6 w-px bg-dark-200 dark:bg-dark-700" />
               <h1 className="text-lg font-semibold text-dark-900 dark:text-white">Practice Mode</h1>
             </div>
-            <button onClick={() => setShowStats(!showStats)} className="btn-secondary text-sm">
-              <TrendingUp className="w-4 h-4 mr-1" />
-              Stats
-            </button>
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+              <button onClick={() => setShowStats(!showStats)} className="btn-secondary text-sm">
+                <TrendingUp className="w-4 h-4 mr-1" />
+                Stats
+              </button>
+            </div>
           </div>
         </div>
       </nav>

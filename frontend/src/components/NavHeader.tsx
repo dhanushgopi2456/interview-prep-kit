@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { Briefcase, LogOut, User } from 'lucide-react';
+import { ThemeToggle } from './ThemeToggle';
 
 interface NavHeaderProps {
   showBack?: boolean;
@@ -73,6 +74,7 @@ export function NavHeader({
           </div>
           <div className="flex items-center gap-3">
             {actions}
+            <ThemeToggle />
             {user && (
               <>
                 <div className="hidden sm:flex items-center gap-2 text-sm text-dark-500 dark:text-dark-400">
