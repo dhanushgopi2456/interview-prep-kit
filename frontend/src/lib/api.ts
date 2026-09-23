@@ -43,7 +43,22 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
+  async (error: AxiosError) => {
+    const originalConfig: any = error.config;
+    // If request failed due to Network Error / CORS on external API, gracefully retry on same-origin /api/backend
+    if (
+      (!error.response || error.message === 'Network Error' || error.code === 'ERR_NETWORK') &&
+      originalConfig &&
+      !originalConfig._retryWithLocal &&
+      originalConfig.baseURL &&
+      originalConfig.baseURL !== '/api/backend'
+    ) {
+      console.warn('[API] Cross-origin Network/CORS error on external URL, falling back to /api/backend proxy');
+      originalConfig._retryWithLocal = true;
+      originalConfig.baseURL = '/api/backend';
+      return api(originalConfig);
+    }
+
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined') {
         const url = error.config?.url || '';
