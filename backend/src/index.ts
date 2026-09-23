@@ -39,11 +39,32 @@ app.use('/api/kits', kitRoutes);
 app.use('/api/research', researchRoutes);
 app.use('/api/generation', generationRoutes);
 
-app.get('/api/health', (req, res) => {
+// Root route for pinging API and Vercel status checks
+app.get('/', (_req, res) => {
   res.json({
+    message: 'Interview Prep Kit API is running',
+    status: 'ok',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      kits: '/api/kits',
+      research: '/api/research',
+      generation: '/api/generation'
+    }
+  });
+});
+
+app.get(['/health', '/api/health'], (_req, res) => {
+  res.json({
+    message: 'Interview Prep Kit API is running',
     status: 'ok',
     timestamp: new Date().toISOString()
   });
+});
+
+app.get('/favicon.ico', (_req, res) => {
+  res.status(204).end();
 });
 
 app.use((err: any, req: any, res: any, next: any) => {
@@ -72,4 +93,11 @@ async function start() {
   }
 }
 
-start();
+if (process.env.VERCEL) {
+  connectDB().catch((err) => console.warn('Vercel MongoDB connect warning:', err));
+} else {
+  start();
+}
+
+export default app;
+export { app };
