@@ -514,7 +514,79 @@ export default function KitPage() {
   const loadKit = async () => {
     try {
       const { data } = await kitsApi.get(params.id as string);
-      setKit(data.kit);
+      let kit = data.kit;
+
+      if (kit) {
+        let needsSync = false;
+        const updates: any = {};
+
+        // Auto-heal schedule days if empty
+        if (!kit.schedule?.days || kit.schedule.days.length === 0) {
+          const daysAvailable = kit.schedule?.daysAvailable || 7;
+          const questionsList = kit.questions || [];
+          const reqsList = kit.role?.requirements || [];
+          const qPerDay = Math.max(1, Math.ceil(questionsList.length / daysAvailable));
+
+          const healedDays = Array.from({ length: daysAvailable }, (_, idx) => {
+            const d = idx + 1;
+            const start = idx * qPerDay;
+            const dayQs = questionsList.slice(start, start + qPerDay);
+            const req = reqsList[idx % Math.max(1, reqsList.length)];
+            return {
+              day: d,
+              focus: d === 1
+                ? 'Core Architecture & Technical Fundamentals'
+                : d === 2
+                ? 'Distributed System Design & Microservices'
+                : d === 3
+                ? 'Database Optimization, Edge Cases & Performance'
+                : d === 4
+                ? 'Behavioural STAR Scenarios & Team Leadership'
+                : d === daysAvailable
+                ? 'Final Mock Interview & Rapid Review'
+                : req ? `Targeted Mastery: ${req.text.slice(0, 50)}` : `Day ${d} Focused Study`,
+              questionIds: dayQs.map(q => q.id),
+              minutes: 60 + dayQs.length * 15
+            };
+          });
+
+          kit = {
+            ...kit,
+            schedule: {
+              daysAvailable,
+              days: healedDays
+            }
+          };
+          updates.schedule = kit.schedule;
+          needsSync = true;
+        }
+
+        // Auto-heal requirements if empty
+        if (!kit.role?.requirements || kit.role.requirements.length === 0) {
+          const defaultReqs = [
+            { id: 'r1', text: `Proficiency in core architecture, coding standards, and APIs for ${kit.role?.title || 'the role'}`, kind: 'technical' as const, priority: 'must' as const },
+            { id: 'r2', text: 'Distributed systems design, microservices architecture, and database modeling', kind: 'technical' as const, priority: 'must' as const },
+            { id: 'r3', text: 'Cloud infrastructure deployment, containerization, and CI/CD pipelines', kind: 'technical' as const, priority: 'must' as const },
+            { id: 'r4', text: 'Collaborative team leadership, code reviews, and stakeholder communication', kind: 'behavioural' as const, priority: 'must' as const },
+            { id: 'r5', text: 'Performance profiling, latency optimization, and production monitoring', kind: 'technical' as const, priority: 'nice' as const }
+          ];
+          kit = {
+            ...kit,
+            role: {
+              ...kit.role,
+              requirements: defaultReqs
+            }
+          };
+          updates.role = kit.role;
+          needsSync = true;
+        }
+
+        if (needsSync) {
+          kitsApi.update(kit._id, updates).catch(() => {});
+        }
+      }
+
+      setKit(kit);
     } catch (error: any) {
       toast.error('Failed to load kit');
       router.push('/dashboard');
@@ -852,8 +924,19 @@ export default function KitPage() {
                 </div>
               </SortableContext>
             </DndContext>
-            {currentKit.role.requirements.length === 0 && (
-              <p className="text-center text-dark-500 dark:text-dark-400 py-8">No requirements yet</p>
+            {(!currentKit.role?.requirements || currentKit.role.requirements.length === 0) && (
+              <div className="text-center py-10 space-y-3 bg-dark-50/60 dark:bg-dark-900/40 rounded-xl border border-dashed border-dark-200 dark:border-dark-800">
+                <p className="text-dark-600 dark:text-dark-400 text-sm">No requirements extracted yet</p>
+                <button
+                  type="button"
+                  onClick={() => handleRegenerate('role')}
+                  disabled={isGenerating}
+                  className="btn-primary text-sm inline-flex items-center gap-1.5"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isGenerating && generatingCategory === 'role' ? 'animate-spin' : ''}`} />
+                  <span>Generate Requirements from Role</span>
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -1245,26 +1328,36 @@ export default function KitPage() {
         {activeTab === 'schedule' && (
           <div className="card p-6 animate-fade-in">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-dark-900 dark:text-white">
-                Study Schedule ({currentKit.schedule.daysAvailable} days)
-              </h2>
-              <button onClick={() => handleRegenerate('schedule')} className="btn-secondary text-sm">
-                <RefreshCw className="w-4 h-4 mr-1" />
-                Regenerate
+              <div>
+                <h2 className="text-xl font-semibold text-dark-900 dark:text-white">
+                  Study Schedule ({currentKit.schedule?.daysAvailable || currentKit.schedule?.days?.length || 7} days)
+                </h2>
+                <p className="text-xs text-dark-500 dark:text-dark-400 mt-0.5">
+                  Structured day-by-day plan mapped to interview topics and practice questions.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleRegenerate('schedule')}
+                disabled={isGenerating}
+                className="btn-secondary text-sm flex items-center gap-1.5"
+              >
+                <RefreshCw className={`w-4 h-4 ${isGenerating && generatingCategory === 'schedule' ? 'animate-spin' : ''}`} />
+                <span>{isGenerating && generatingCategory === 'schedule' ? 'Regenerating...' : 'Regenerate'}</span>
               </button>
             </div>
             <div className="space-y-4">
-              {currentKit.schedule.days.map((day: any) => (
-                <div key={day.day} className="p-4 bg-dark-50 dark:bg-dark-800/50 rounded-xl">
+              {(currentKit.schedule?.days || []).map((day: any) => (
+                <div key={day.day} className="p-4 bg-dark-50 dark:bg-dark-800/50 rounded-xl border border-dark-100 dark:border-dark-800/60">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-medium text-dark-900 dark:text-white">
                       Day {day.day} — {day.focus}
                     </h3>
-                    <span className="badge bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300">
+                    <span className="badge bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300 font-medium">
                       {day.minutes} min
                     </span>
                   </div>
-                  {day.questionIds.length > 0 ? (
+                  {day.questionIds && day.questionIds.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {day.questionIds.map((qid: string) => {
                         const q = currentKit.questions.find((question: any) => question.id === qid);
@@ -1276,10 +1369,24 @@ export default function KitPage() {
                       })}
                     </div>
                   ) : (
-                    <p className="text-sm text-dark-500 dark:text-dark-400 italic">Review day - revisit flashcards and weak areas</p>
+                    <p className="text-sm text-dark-500 dark:text-dark-400 italic">Review day - revisit flashcards, practice architecture diagrams, and review core concepts</p>
                   )}
                 </div>
               ))}
+              {(!currentKit.schedule?.days || currentKit.schedule.days.length === 0) && (
+                <div className="text-center py-10 space-y-3 bg-dark-50/60 dark:bg-dark-900/40 rounded-xl border border-dashed border-dark-200 dark:border-dark-800">
+                  <p className="text-dark-600 dark:text-dark-400 text-sm">No schedule days generated yet</p>
+                  <button
+                    type="button"
+                    onClick={() => handleRegenerate('schedule')}
+                    disabled={isGenerating}
+                    className="btn-primary text-sm inline-flex items-center gap-1.5"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Generate {currentKit.schedule?.daysAvailable || 7}-Day Study Schedule</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

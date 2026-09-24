@@ -69,10 +69,9 @@ export default function RegisterPage() {
     try {
       await register(email.trim(), password, name.trim());
 
-      toast.success('Account created successfully! Welcome aboard!');
+      toast.success('Account created successfully! Please sign in to continue.');
 
-      router.push('/dashboard');
-      router.refresh();
+      router.push(`/login?registered=true&email=${encodeURIComponent(email.trim())}`);
     } catch (error: any) {
       console.error('Registration error:', error);
 

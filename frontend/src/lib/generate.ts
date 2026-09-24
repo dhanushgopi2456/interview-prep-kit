@@ -200,18 +200,33 @@ Output ONLY valid JSON adhering strictly to this schema:
 
 function buildFallbackSchedule(reqs: Requirement[], questions: Question[], daysAvailable: number): ScheduleDay[] {
   const days: ScheduleDay[] = [];
-  const qPerDay = Math.ceil(questions.length / Math.max(1, daysAvailable));
-  let qIdx = 0;
+  const qPerDay = Math.max(1, Math.ceil(questions.length / Math.max(1, daysAvailable)));
 
   for (let d = 1; d <= daysAvailable; d++) {
-    const dayQuestions = questions.slice(qIdx, qIdx + qPerDay);
-    qIdx += qPerDay;
-    const focusReq = reqs[d - 1] ? reqs[d - 1].text : `Day ${d} Review & Practice`;
+    const startIdx = (d - 1) * qPerDay;
+    const dayQuestions = questions.slice(startIdx, startIdx + qPerDay);
+    const dayReq = reqs[(d - 1) % Math.max(1, reqs.length)];
+
+    let focus = `Day ${d} Practice & Review`;
+    if (d === 1) {
+      focus = `Core Architecture & Fundamentals: ${dayReq ? dayReq.text.slice(0, 50) : 'Core Skills'}`;
+    } else if (d === 2) {
+      focus = 'Distributed Systems & Scalability Deep-Dive';
+    } else if (d === 3) {
+      focus = 'Database Tuning, Edge Cases & Performance';
+    } else if (d === 4) {
+      focus = 'Behavioural STAR Scenarios & Team Leadership';
+    } else if (d === daysAvailable) {
+      focus = 'Final Mock Interview & Rapid Flashcard Review';
+    } else if (dayReq) {
+      focus = `Targeted Mastery: ${dayReq.text.slice(0, 50)}`;
+    }
+
     days.push({
       day: d,
-      focus: focusReq.slice(0, 60),
+      focus,
       questionIds: dayQuestions.map(q => q.id),
-      minutes: 60 + dayQuestions.length * 10
+      minutes: 60 + dayQuestions.length * 15
     });
   }
   return days;
@@ -247,6 +262,36 @@ function buildAlgorithmicKit(
       });
     }
   });
+
+  // Extract from paragraphs if few bullet points were matched
+  if (extractedRequirements.length < 3) {
+    const rawSentences = jd
+      .split(/(?<=[.!?])\s+|[;•\n]+/)
+      .map(s => s.trim().replace(/^[-•*\d\.\)\s]+/, ''))
+      .filter(s => s.length >= 20 && s.length <= 250);
+
+    if (rawSentences.length >= 2) {
+      if (extractedRequirements.length <= 1) {
+        extractedRequirements.length = 0;
+      }
+      for (const sent of rawSentences) {
+        if (!extractedRequirements.some(r => r.text === sent)) {
+          const lower = sent.toLowerCase();
+          const isNice = lower.includes('nice to have') || lower.includes('plus') || lower.includes('preferred');
+          const isBehavioural = lower.includes('collaborat') || lower.includes('communicat') || lower.includes('lead') || lower.includes('team');
+
+          extractedRequirements.push({
+            id: `r${extractedRequirements.length + 1}`,
+            text: sent,
+            kind: isBehavioural ? 'behavioural' : 'technical',
+            priority: isNice ? 'nice' : 'must'
+          });
+
+          if (extractedRequirements.length >= 7) break;
+        }
+      }
+    }
+  }
 
   if (extractedRequirements.length === 0) {
     extractedRequirements.push(

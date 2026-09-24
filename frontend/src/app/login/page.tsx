@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'react-hot-toast';
@@ -48,8 +48,11 @@ const demoCredentials = [
   }
 ];
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const registered = searchParams.get('registered') === 'true';
+  const emailParam = searchParams.get('email');
 
   const { login } = useAuthStore();
 
@@ -60,6 +63,12 @@ export default function LoginPage() {
   const [selectedDemo, setSelectedDemo] =
     useState<(typeof demoCredentials)[0] | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (emailParam) {
+      setEmail(emailParam);
+    }
+  }, [emailParam]);
 
   // Copy to clipboard helper
   const handleCopy = (text: string, label: string, e: React.MouseEvent) => {
@@ -174,6 +183,21 @@ export default function LoginPage() {
               Enter your credentials or choose a pre-configured demo account below
             </p>
           </div>
+
+          {/* Registration Success Banner */}
+          {registered && (
+            <div className="mb-6 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 flex items-start gap-3 animate-fade-in shadow-sm">
+              <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
+                  Account Created Successfully!
+                </h3>
+                <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">
+                  Your account is registered. Please enter your password below to sign in and access your prep kit dashboard.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Login Form */}
           <form
@@ -444,5 +468,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-dark-500">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

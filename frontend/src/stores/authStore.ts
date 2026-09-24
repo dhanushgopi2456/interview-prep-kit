@@ -100,15 +100,15 @@ export const useAuthStore = create<AuthState>()(
           name
         );
 
-        const token = data.token || null;
-        if (token && typeof window !== 'undefined') {
-          localStorage.setItem('auth_token', token);
+        // Clear any previous tokens so the user logs in fresh on the login page
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('auth_token');
         }
 
         set({
-          user: data.user,
-          token,
-          isAuthenticated: true,
+          user: null,
+          token: null,
+          isAuthenticated: false,
           isLoading: false
         });
       },

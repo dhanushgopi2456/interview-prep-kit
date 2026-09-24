@@ -227,21 +227,42 @@ export function createMemoryKit(data: any): MemoryKit {
       whatTheyDo: `${company} is a leading organization specializing in technology-driven customer and enterprise solutions.`,
       sources: [data.source?.companyUrl || '']
     },
-    role: data.role || {
-      title: roleTitle,
-      seniority: 'Mid-Senior',
-      responsibilities: [
-        `Deliver robust, production-grade applications for ${company}`,
-        'Participate in architecture reviews, code quality initiatives, and system design'
-      ],
-      requirements: sampleAccentureRequirements
-    },
-    questions: data.questions?.length ? data.questions : sampleAccentureQuestions,
-    flashcards: data.flashcards?.length ? data.flashcards : sampleAccentureFlashcards,
-    schedule: data.schedule || {
-      daysAvailable: days,
-      days: sampleAccentureSchedule.slice(0, days)
-    },
+    role: data.role?.requirements && data.role.requirements.length > 0
+      ? data.role
+      : {
+          title: roleTitle,
+          seniority: 'Mid-Senior',
+          responsibilities: [
+            `Deliver robust, production-grade applications for ${company}`,
+            'Participate in architecture reviews, code quality initiatives, and system design'
+          ],
+          requirements: sampleAccentureRequirements
+        },
+    questions: data.questions && data.questions.length > 0 ? data.questions : sampleAccentureQuestions,
+    flashcards: data.flashcards && data.flashcards.length > 0 ? data.flashcards : sampleAccentureFlashcards,
+    schedule: data.schedule?.days && data.schedule.days.length > 0
+      ? data.schedule
+      : {
+          daysAvailable: days,
+          days: Array.from({ length: days }, (_, idx) => ({
+            day: idx + 1,
+            focus: idx === 0
+              ? 'Core Architecture & Fundamentals'
+              : idx === 1
+              ? 'Distributed Systems & Microservices'
+              : idx === 2
+              ? 'Database Optimization & Edge Cases'
+              : idx === 3
+              ? 'Behavioural STAR Scenarios & Team Leadership'
+              : idx === days - 1
+              ? 'Mock Interview & Flashcard Mastery'
+              : `Day ${idx + 1} Technical & Practical Review`,
+            questionIds: sampleAccentureQuestions[idx % sampleAccentureQuestions.length]
+              ? [sampleAccentureQuestions[idx % sampleAccentureQuestions.length].id]
+              : ['q1'],
+            minutes: 60 + ((idx % 3) + 1) * 10
+          }))
+        },
     coverage: data.coverage || {
       uncoveredRequirementIds: [],
       passes: 1

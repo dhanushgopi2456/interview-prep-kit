@@ -316,6 +316,52 @@ export async function POST(req: NextRequest, { params }: { params: { path: strin
       kit.flashcards = [...(kit.flashcards || []), ...newFlashcards];
     }
 
+    // Handle schedule generation
+    if (section === 'schedule') {
+      const daysCount = kit.schedule?.daysAvailable || 7;
+      const questionsList = kit.questions || [];
+      const reqsList = kit.role?.requirements || [];
+      const qPerDay = Math.max(1, Math.ceil(questionsList.length / daysCount));
+
+      kit.schedule = {
+        daysAvailable: daysCount,
+        days: Array.from({ length: daysCount }, (_, i) => {
+          const d = i + 1;
+          const start = i * qPerDay;
+          const dayQs = questionsList.slice(start, start + qPerDay);
+          const req = reqsList[i % Math.max(1, reqsList.length)];
+          return {
+            day: d,
+            focus: d === 1
+              ? 'Core Architecture & Technical Fundamentals'
+              : d === 2
+              ? 'Distributed System Design & Microservices'
+              : d === 3
+              ? 'Database Optimization & Edge Cases'
+              : d === 4
+              ? 'Behavioural STAR Scenarios & Team Leadership'
+              : d === daysCount
+              ? 'Final Mock Interview & Rapid Review'
+              : req ? `Targeted Mastery: ${req.text.slice(0, 50)}` : `Day ${d} Focused Study`,
+            questionIds: dayQs.map(q => q.id),
+            minutes: 60 + dayQs.length * 15
+          };
+        })
+      };
+    }
+
+    // Handle role / requirements regeneration
+    if (section === 'role' || section === 'requirements') {
+      const generated = await generateKitContent(
+        kit.source.role || 'Software Engineer',
+        kit.source.companyUrl,
+        kit.schedule?.daysAvailable || 7,
+        kit.source.role,
+        kit.source.location
+      );
+      kit.role = generated.role;
+    }
+
     kit.updatedAt = new Date().toISOString();
     kitsStore.set(kitId, kit);
     return jsonResponse({ kit, message: `Section ${section} regenerated successfully` });

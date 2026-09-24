@@ -3,6 +3,7 @@ import { Kit } from '../models/Kit';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 import { createKitSchema, updateKitSchema } from '../utils/validation';
+import { buildCompleteKitContent } from '../services/kitContentBuilder';
 import {
   createMemoryKit,
   getMemoryKits,
@@ -64,42 +65,34 @@ router.post(
     const company = getCompanyNameFromUrl(companyUrl);
     const userId = req.user._id ? req.user._id.toString() : (req.user.id || '507f1f77bcf86cd799439011');
 
+    // Build complete kit content (requirements, questions with diagrams, flashcards, schedule days)
+    const generatedContent = buildCompleteKitContent({
+      jobDescription,
+      company,
+      companyUrl,
+      role: role || undefined,
+      location: location || undefined,
+      days: days || 7
+    });
+
     const initialKitData = {
       userId,
       source: {
         company,
         companyUrl,
-        role: role || 'Unknown Role',
+        role: role || generatedContent.role.title,
         location: location || 'Not specified',
         jdChars: jobDescription.length,
         researchedAt: new Date().toISOString(),
-        pagesUsed: []
+        pagesUsed: [companyUrl]
       },
-      companyBrief: {
-        summary: `Interview preparation kit for ${company} based on the provided job description.`,
-        whatTheyDo: `${company} is the company associated with this job posting.`,
-        sources: [companyUrl]
-      },
-      role: {
-        title: role || 'Unknown Role',
-        seniority: 'Mid-Senior',
-        responsibilities: [
-          `Lead delivery and engineering initiatives for ${company}`,
-          'Collaborate across cross-functional product and infrastructure teams'
-        ],
-        requirements: []
-      },
-      questions: [],
-      flashcards: [],
-      schedule: {
-        daysAvailable: days,
-        days: []
-      },
-      coverage: {
-        uncoveredRequirementIds: [],
-        passes: 0
-      },
-      status: 'generating'
+      companyBrief: generatedContent.companyBrief,
+      role: generatedContent.role,
+      questions: generatedContent.questions,
+      flashcards: generatedContent.flashcards,
+      schedule: generatedContent.schedule,
+      coverage: generatedContent.coverage,
+      status: 'completed'
     };
 
     // Try MongoDB first
@@ -307,7 +300,9 @@ router.post(
     const validSections = [
       'companyBrief',
       'role',
+      'requirements',
       'questions',
+      'more-questions',
       'flashcards',
       'schedule'
     ];
@@ -320,35 +315,110 @@ router.post(
     }
 
     const kitId = req.params.id;
-    const memKit = updateMemoryKit(kitId, { status: 'generating' });
+    let existingKit: any = null;
 
     try {
-      const kit = await Kit.findOne({
-        _id: kitId,
-        userId: req.user._id
-      });
-      if (kit) {
-        kit.status = 'generating';
-        await kit.save();
-        return res.json({
-          kit,
-          message: `Regenerating ${section}...`
-        });
-      }
+      existingKit = await Kit.findOne({ _id: kitId, userId: req.user._id });
     } catch (err) {
-      console.warn('[Kit Route] MongoDB regenerate section find error:', err);
+      console.warn('[Kit Route] MongoDB findOne error on regenerate:', err);
+    }
+    if (!existingKit) {
+      existingKit = getMemoryKitById(kitId);
     }
 
-    if (memKit) {
-      return res.json({
-        kit: memKit,
-        message: `Regenerating ${section}...`
+    if (!existingKit) {
+      return res.status(404).json({
+        error: 'Kit not found',
+        code: 'NOT_FOUND'
       });
     }
 
-    return res.status(404).json({
-      error: 'Kit not found',
-      code: 'NOT_FOUND'
+    // Build regenerated section updates
+    const updates: any = { status: 'completed' };
+    const daysAvailable = existingKit.schedule?.daysAvailable || 7;
+    const questionsList = existingKit.questions || [];
+    const reqsList = existingKit.role?.requirements || [];
+
+    if (section === 'schedule') {
+      const qPerDay = Math.max(1, Math.ceil(questionsList.length / daysAvailable));
+      const freshDays = Array.from({ length: daysAvailable }, (_, i) => {
+        const d = i + 1;
+        const start = i * qPerDay;
+        const dayQs = questionsList.slice(start, start + qPerDay);
+        const req = reqsList[i % Math.max(1, reqsList.length)];
+        return {
+          day: d,
+          focus: d === 1
+            ? 'Core Architecture & Technical Fundamentals'
+            : d === 2
+            ? 'Distributed System Design & Microservices'
+            : d === 3
+            ? 'Database Tuning, Edge Cases & Performance'
+            : d === 4
+            ? 'Behavioural STAR Scenarios & Team Leadership'
+            : d === daysAvailable
+            ? 'Final Mock Interview & Rapid Flashcard Review'
+            : req ? `Targeted Mastery: ${req.text.slice(0, 50)}` : `Day ${d} Focused Study`,
+          questionIds: dayQs.map(q => q.id),
+          minutes: 60 + dayQs.length * 15
+        };
+      });
+
+      updates.schedule = {
+        daysAvailable,
+        days: freshDays
+      };
+    } else if (section === 'role' || section === 'requirements') {
+      const regenerated = buildCompleteKitContent({
+        jobDescription: existingKit.source?.role || 'Senior Software Engineer',
+        company: existingKit.source?.company || 'Company',
+        companyUrl: existingKit.source?.companyUrl || '',
+        role: existingKit.source?.role,
+        days: daysAvailable
+      });
+      updates.role = regenerated.role;
+    } else if (section === 'questions' || section === 'more-questions') {
+      const regenerated = buildCompleteKitContent({
+        jobDescription: existingKit.source?.role || 'Senior Software Engineer',
+        company: existingKit.source?.company || 'Company',
+        companyUrl: existingKit.source?.companyUrl || '',
+        role: existingKit.source?.role,
+        days: daysAvailable
+      });
+      const newQuestions = regenerated.questions.map((q, idx) => ({
+        ...q,
+        id: `q_regen_${Date.now()}_${idx + 1}`
+      }));
+      updates.questions = [...(existingKit.questions || []), ...newQuestions];
+    } else if (section === 'flashcards') {
+      updates.flashcards = (reqsList.length > 0 ? reqsList : [{ id: 'r1', text: 'Core System Architecture' }]).map((r: any, i: number) => ({
+        id: `f_regen_${Date.now()}_${i + 1}`,
+        front: `Core Concept & Best Practices: ${r.text.slice(0, 75)}`,
+        back: `Detailed explanation of ${r.text}. Focus on architectural trade-offs, scalability, and measurable production impact.`,
+        requirementIds: [r.id],
+        status: 'generated'
+      }));
+    }
+
+    // Persist updates to MongoDB and Memory Store
+    let savedKit: any = null;
+    try {
+      if (existingKit._id && existingKit.save) {
+        Object.assign(existingKit, updates);
+        savedKit = await existingKit.save();
+      } else {
+        savedKit = await Kit.findByIdAndUpdate(kitId, { $set: updates }, { new: true });
+      }
+    } catch (dbErr) {
+      console.warn('[Kit Route] MongoDB update error on regenerate:', dbErr);
+    }
+
+    const memKit = updateMemoryKit(kitId, updates);
+    const finalKit = savedKit || memKit || existingKit;
+
+    return res.json({
+      kit: finalKit,
+      message: `Section ${section} regenerated successfully`
     });
   })
 );

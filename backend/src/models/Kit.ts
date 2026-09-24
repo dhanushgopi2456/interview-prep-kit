@@ -38,6 +38,9 @@ export interface IQuestion {
   answerOutline: string;
 
   difficulty: 1 | 2 | 3;
+  diagram?: string;
+  diagramType?: string;
+  status?: string;
 }
 
 
@@ -254,6 +257,21 @@ const questionSchema =
         type: Number,
         enum: [1, 2, 3],
         required: true
+      },
+
+      diagram: {
+        type: String,
+        required: false
+      },
+
+      diagramType: {
+        type: String,
+        required: false
+      },
+
+      status: {
+        type: String,
+        required: false
       }
     },
     {
