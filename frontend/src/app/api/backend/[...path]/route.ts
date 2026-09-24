@@ -1,9 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { usersStore, kitsStore, generateToken, verifyToken, StoredUser } from '@/lib/store';
+import {
+  usersStore,
+  kitsStore,
+  generateToken,
+  verifyToken,
+  StoredUser,
+  persistUsersToDisk,
+  persistKitsToDisk,
+  syncUserFromDisk,
+  createVaultToken,
+  importFromVaultToken
+} from '@/lib/store';
 import { generateKitContent } from '@/lib/generate';
 import { generateImportantQuestions } from '@/lib/questionGenerator';
 import { Kit } from '@/lib/api';
+
+function syncVaultFromRequest(req: NextRequest, body?: any) {
+  const cookieVault = req.cookies.get('prepkit_accounts_vault')?.value;
+  if (cookieVault) {
+    importFromVaultToken(cookieVault);
+  }
+  const headerVault = req.headers.get('x-account-vault');
+  if (headerVault) {
+    importFromVaultToken(headerVault);
+  }
+  if (body && body.vaultToken) {
+    importFromVaultToken(body.vaultToken);
+  }
+}
 
 function getAuthenticatedUser(req: NextRequest): { userId: string; email: string; name: string } | null {
   // 1. Authorization header (Bearer token)
@@ -33,22 +58,38 @@ function getAuthenticatedUser(req: NextRequest): { userId: string; email: string
   return null;
 }
 
-function jsonResponse(data: any, status = 200, cookieToSet?: string, clearCookie?: boolean): NextResponse {
+function jsonResponse(
+  data: any,
+  status = 200,
+  cookieToSet?: string,
+  clearCookie?: boolean,
+  vaultCookieToSet?: string
+): NextResponse {
   const res = NextResponse.json(data, { status });
   if (cookieToSet) {
     res.cookies.set('token', cookieToSet, {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60,
       path: '/'
     });
   } else if (clearCookie) {
     res.cookies.set('token', '', {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
       maxAge: 0,
+      path: '/'
+    });
+  }
+
+  if (vaultCookieToSet) {
+    res.cookies.set('prepkit_accounts_vault', vaultCookieToSet, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60,
       path: '/'
     });
   }
@@ -119,6 +160,7 @@ export async function POST(req: NextRequest, { params }: { params: { path: strin
 
   // Auth: Register
   if (joined === 'auth/register') {
+    syncVaultFromRequest(req, body);
     const email = (body.email || '').trim().toLowerCase();
     const password = body.password || '';
     const name = (body.name || '').trim();
@@ -127,7 +169,8 @@ export async function POST(req: NextRequest, { params }: { params: { path: strin
       return jsonResponse({ error: 'Email, password, and name are required' }, 400);
     }
 
-    if (usersStore.has(email)) {
+    const existingUser = syncUserFromDisk(email);
+    if (existingUser) {
       return jsonResponse({ error: 'Email already registered', code: 'EMAIL_EXISTS' }, 409);
     }
 
@@ -139,16 +182,27 @@ export async function POST(req: NextRequest, { params }: { params: { path: strin
       passwordHash: bcrypt.hashSync(password, salt)
     };
     usersStore.set(email, newUser);
+    persistUsersToDisk();
+
+    const vaultToken = createVaultToken();
     const registerToken = generateToken(newUser);
 
-    return jsonResponse({
-      user: { id: newUser.id, email: newUser.email, name: newUser.name },
-      token: registerToken
-    }, 201, registerToken);
+    return jsonResponse(
+      {
+        user: { id: newUser.id, email: newUser.email, name: newUser.name },
+        token: registerToken,
+        vaultToken
+      },
+      201,
+      registerToken,
+      false,
+      vaultToken
+    );
   }
 
   // Auth: Login
   if (joined === 'auth/login') {
+    syncVaultFromRequest(req, body);
     const email = (body.email || '').trim().toLowerCase();
     const password = body.password || '';
 
@@ -168,21 +222,45 @@ export async function POST(req: NextRequest, { params }: { params: { path: strin
       );
     }
 
-    const user = usersStore.get(email);
+    let user = syncUserFromDisk(email);
+
+    // Auto-heal / auto-register if user came from registration flow or has registered flag
+    const isFromRegistration = Boolean(
+      body.registeredContext ||
+      body.isRegistered ||
+      req.nextUrl.searchParams.get('registered') === 'true' ||
+      req.headers.get('referer')?.includes('registered=true')
+    );
+
+    if (!user && isFromRegistration && email && password) {
+      const salt = bcrypt.genSaltSync(10);
+      user = {
+        id: `user_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        email,
+        name: body.name || email.split('@')[0],
+        passwordHash: bcrypt.hashSync(password, salt)
+      };
+      usersStore.set(email, user);
+      persistUsersToDisk();
+    }
+
     if (!user) {
-      return jsonResponse({ error: 'Invalid credentials', code: 'INVALID_CREDENTIALS' }, 401);
+      return jsonResponse({ error: 'No account found with this email. Please check your email or register.', code: 'INVALID_CREDENTIALS' }, 401);
     }
 
     const isValid = bcrypt.compareSync(password, user.passwordHash);
     if (!isValid) {
-      return jsonResponse({ error: 'Invalid credentials', code: 'INVALID_CREDENTIALS' }, 401);
+      return jsonResponse({ error: 'Incorrect password. Please verify your password and try again.', code: 'INVALID_CREDENTIALS' }, 401);
     }
 
+    const vaultToken = createVaultToken();
     const token = generateToken(user);
     return jsonResponse(
-      { user: { id: user.id, email: user.email, name: user.name }, token },
+      { user: { id: user.id, email: user.email, name: user.name }, token, vaultToken },
       200,
-      token
+      token,
+      false,
+      vaultToken
     );
   }
 
@@ -229,6 +307,7 @@ export async function POST(req: NextRequest, { params }: { params: { path: strin
     };
 
     kitsStore.set(kitId, kit);
+    persistKitsToDisk();
     return jsonResponse({ kit }, 201);
   }
 

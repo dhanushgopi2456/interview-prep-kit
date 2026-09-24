@@ -17,7 +17,8 @@ interface AuthState {
 
   login: (
     email: string,
-    password: string
+    password: string,
+    extra?: { registeredContext?: boolean; vaultToken?: string; name?: string }
   ) => Promise<void>;
 
   register: (
@@ -63,19 +64,23 @@ export const useAuthStore = create<AuthState>()(
       /*
        * LOGIN
        */
-      login: async (email, password) => {
+      login: async (email, password, extra) => {
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('explicitly_logged_out');
         }
 
         const { data } = await authApi.login(
           email,
-          password
+          password,
+          extra
         );
 
         const token = data.token || null;
         if (token && typeof window !== 'undefined') {
           localStorage.setItem('auth_token', token);
+        }
+        if (data.vaultToken && typeof window !== 'undefined') {
+          localStorage.setItem('prepkit_accounts_vault', data.vaultToken);
         }
 
         set({
@@ -99,6 +104,11 @@ export const useAuthStore = create<AuthState>()(
           password,
           name
         );
+
+        if (data?.vaultToken && typeof window !== 'undefined') {
+          localStorage.setItem('prepkit_accounts_vault', data.vaultToken);
+          localStorage.setItem('prepkit_last_registered_email', email);
+        }
 
         // Clear any previous tokens so the user logs in fresh on the login page
         if (typeof window !== 'undefined') {

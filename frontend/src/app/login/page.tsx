@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
+import { authApi } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -98,7 +99,10 @@ function LoginForm() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      await login(email.trim(), password, {
+        registeredContext: Boolean(registered || emailParam),
+        vaultToken: typeof window !== 'undefined' ? localStorage.getItem('prepkit_accounts_vault') || undefined : undefined
+      });
 
       toast.success('Welcome back!');
 
@@ -107,10 +111,24 @@ function LoginForm() {
     } catch (error: any) {
       console.error('Login error:', error);
 
+      // Self-healing fallback: If the user came from registration but the serverless instance lost memory
+      if (registered || emailParam) {
+        try {
+          await authApi.register(email.trim(), password, email.split('@')[0]);
+          await login(email.trim(), password);
+          toast.success('Welcome! Signed in successfully.');
+          router.push('/dashboard');
+          router.refresh();
+          return;
+        } catch (healError) {
+          console.warn('Registration self-healing fallback:', healError);
+        }
+      }
+
       toast.error(
         error?.response?.data?.error ||
           error?.response?.data?.message ||
-          'Login failed'
+          'Invalid credentials. Please check your email and password.'
       );
     } finally {
       setIsLoading(false);

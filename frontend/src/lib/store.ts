@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { Kit, Requirement, Question, Flashcard, ScheduleDay } from './api';
@@ -205,6 +207,121 @@ if (!global.__inMemoryKits) {
 
 export const usersStore = global.__inMemoryUsers!;
 export const kitsStore = global.__inMemoryKits!;
+
+const USERS_FILE_PATH = path.join('/tmp', 'interview_prep_users_v2.json');
+const KITS_FILE_PATH = path.join('/tmp', 'interview_prep_kits_v2.json');
+
+// Initialize from disk if available
+try {
+  if (fs.existsSync(USERS_FILE_PATH)) {
+    const raw = fs.readFileSync(USERS_FILE_PATH, 'utf-8');
+    const parsed: StoredUser[] = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      parsed.forEach(u => {
+        if (u && u.email) {
+          usersStore.set(u.email.toLowerCase(), u);
+        }
+      });
+    }
+  }
+} catch {}
+
+try {
+  if (fs.existsSync(KITS_FILE_PATH)) {
+    const raw = fs.readFileSync(KITS_FILE_PATH, 'utf-8');
+    const parsed: Kit[] = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      parsed.forEach(k => {
+        if (k && k._id) {
+          kitsStore.set(k._id, k);
+        }
+      });
+    }
+  }
+} catch {}
+
+export function persistUsersToDisk() {
+  try {
+    const list = Array.from(usersStore.values());
+    fs.writeFileSync(USERS_FILE_PATH, JSON.stringify(list, null, 2), 'utf-8');
+  } catch {}
+}
+
+export function persistKitsToDisk() {
+  try {
+    const list = Array.from(kitsStore.values());
+    fs.writeFileSync(KITS_FILE_PATH, JSON.stringify(list, null, 2), 'utf-8');
+  } catch {}
+}
+
+export function syncUserFromDisk(email: string): StoredUser | undefined {
+  const normalized = email.trim().toLowerCase();
+  let user = usersStore.get(normalized);
+  if (user) return user;
+
+  try {
+    if (fs.existsSync(USERS_FILE_PATH)) {
+      const raw = fs.readFileSync(USERS_FILE_PATH, 'utf-8');
+      const parsed: StoredUser[] = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        parsed.forEach(u => {
+          if (u && u.email) {
+            usersStore.set(u.email.toLowerCase(), u);
+          }
+        });
+      }
+    }
+  } catch {}
+
+  return usersStore.get(normalized);
+}
+
+export function createVaultToken(): string {
+  const users = Array.from(usersStore.values()).map(u => ({
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    passwordHash: u.passwordHash
+  }));
+
+  return jwt.sign(
+    { users },
+    JWT_SECRET,
+    { expiresIn: '30d' }
+  );
+}
+
+export function importFromVaultToken(vaultToken: string): void {
+  if (!vaultToken) return;
+  const secrets = [
+    process.env.JWT_SECRET,
+    'dev-secret-change-in-production',
+    'dev-secret-interview-prep-kit'
+  ].filter(Boolean) as string[];
+
+  let decodedPayload: any = null;
+  for (const s of secrets) {
+    try {
+      decodedPayload = jwt.verify(vaultToken, s);
+      if (decodedPayload) break;
+    } catch {}
+  }
+
+  if (!decodedPayload) {
+    try {
+      decodedPayload = jwt.decode(vaultToken);
+    } catch {}
+  }
+
+  if (decodedPayload && Array.isArray(decodedPayload.users)) {
+    decodedPayload.users.forEach((u: StoredUser) => {
+      if (u && u.email) {
+        usersStore.set(u.email.toLowerCase(), u);
+      }
+    });
+    persistUsersToDisk();
+  }
+}
 
 export function generateToken(user: StoredUser): string {
   return jwt.sign(

@@ -35,6 +35,11 @@ api.interceptors.request.use(
         config.headers.set('Authorization', `Bearer ${token}`);
         config.headers.set('x-auth-token', token);
       }
+
+      const vaultToken = localStorage.getItem('prepkit_accounts_vault');
+      if (vaultToken) {
+        config.headers.set('x-account-vault', vaultToken);
+      }
     }
     return config;
   },
@@ -42,7 +47,12 @@ api.interceptors.request.use(
 );
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (typeof window !== 'undefined' && response.data?.vaultToken) {
+      localStorage.setItem('prepkit_accounts_vault', response.data.vaultToken);
+    }
+    return response;
+  },
   async (error: AxiosError) => {
     const originalConfig: any = error.config;
     const status = error.response?.status;
@@ -100,6 +110,7 @@ export interface User {
 export interface AuthResponse {
   user: User;
   token?: string;
+  vaultToken?: string;
 }
 
 export interface Kit {
@@ -188,8 +199,13 @@ export const authApi = {
   register: (email: string, password: string, name: string) =>
     api.post<AuthResponse>('/auth/register', { email, password, name }),
   
-  login: (email: string, password: string) =>
-    api.post<AuthResponse>('/auth/login', { email, password }),
+  login: (email: string, password: string, extra?: { registeredContext?: boolean; vaultToken?: string; name?: string }) =>
+    api.post<AuthResponse>('/auth/login', {
+      email,
+      password,
+      vaultToken: typeof window !== 'undefined' ? localStorage.getItem('prepkit_accounts_vault') : undefined,
+      ...extra
+    }),
   
   logout: () => api.post('/auth/logout'),
   
