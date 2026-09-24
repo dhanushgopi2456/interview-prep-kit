@@ -4,6 +4,7 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 import { generateKit } from '../services/generation';
 import { crawlCompanySite } from '../services/research';
+import { getMemoryKitById, updateMemoryKit } from '../services/kitMemoryStore';
 
 const router: Router = Router();
 
@@ -25,10 +26,19 @@ router.post(
       });
     }
 
-    const kit = await Kit.findOne({
-      _id: req.params.kitId,
-      userId: req.user._id
-    });
+    let kit: any = null;
+    try {
+      kit = await Kit.findOne({
+        _id: req.params.kitId,
+        userId: req.user._id
+      });
+    } catch (err) {
+      console.warn('[Generation Route] MongoDB find error:', err);
+    }
+
+    if (!kit) {
+      kit = getMemoryKitById(req.params.kitId);
+    }
 
     if (!kit) {
       return res.status(404).json({
@@ -282,10 +292,26 @@ router.post(
         finalCoverage;
 
       kit.status = 'completed';
-
       kit.error = undefined;
 
-      await kit.save();
+      try {
+        if (typeof kit.save === 'function') {
+          await kit.save();
+        }
+      } catch (saveErr) {
+        console.warn('[Generation Route] MongoDB kit.save error, mirrored in memory store');
+      }
+
+      updateMemoryKit(req.params.kitId, {
+        companyBrief: kit.companyBrief,
+        role: kit.role,
+        questions: kit.questions,
+        flashcards: kit.flashcards,
+        schedule: kit.schedule,
+        coverage: kit.coverage,
+        status: 'completed',
+        error: undefined
+      });
 
       /*
        * ======================================
@@ -312,7 +338,16 @@ router.post(
           ? error.message
           : 'Generation failed';
 
-      await kit.save();
+      try {
+        if (typeof kit.save === 'function') {
+          await kit.save();
+        }
+      } catch {}
+
+      updateMemoryKit(req.params.kitId, {
+        status: 'failed',
+        error: kit.error
+      });
 
       return res.status(500).json({
         error: 'Generation failed',

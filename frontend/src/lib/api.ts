@@ -45,15 +45,26 @@ api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalConfig: any = error.config;
-    // If request failed due to Network Error / CORS on external API, gracefully retry on same-origin /api/backend
+    const status = error.response?.status;
+    const errorDataStr = JSON.stringify(error.response?.data || '').toLowerCase();
+    const isDbOfflineOrUnavailable =
+      !error.response ||
+      error.message === 'Network Error' ||
+      error.code === 'ERR_NETWORK' ||
+      status === 503 ||
+      status === 502 ||
+      status === 504 ||
+      (status === 500 && (errorDataStr.includes('database') || errorDataStr.includes('offline') || errorDataStr.includes('mongo')));
+
+    // If request failed due to Network Error, CORS, 503, or DB offline on external API, gracefully retry on same-origin /api/backend
     if (
-      (!error.response || error.message === 'Network Error' || error.code === 'ERR_NETWORK') &&
+      isDbOfflineOrUnavailable &&
       originalConfig &&
       !originalConfig._retryWithLocal &&
       originalConfig.baseURL &&
       originalConfig.baseURL !== '/api/backend'
     ) {
-      console.warn('[API] Cross-origin Network/CORS error on external URL, falling back to /api/backend proxy');
+      console.warn(`[API] Remote endpoint error (status: ${status || 'network'}), seamlessly falling back to local /api/backend proxy`);
       originalConfig._retryWithLocal = true;
       originalConfig.baseURL = '/api/backend';
       return api(originalConfig);
