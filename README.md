@@ -1,323 +1,436 @@
-# Interview Prep Kit
+# 🚀 Interview Prep Kit
 
-Turn job descriptions into personalized interview preparation kits.
+### 🎯 Turn Any Job Description Into a Personalized Interview Preparation Plan
 
-## Project Overview
+<p align="center">
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&pause=1000&color=6366F1&center=true&vCenter=true&width=800&lines=AI-Powered+Interview+Preparation;Analyze+Job+Descriptions+%F0%9F%94%8D;Research+Companies+%F0%9F%8F%A2;Generate+Targeted+Questions+%F0%9F%A7%A0;Practice+Smarter+%F0%9F%8E%AF" />
+</p>
 
-Interview Prep Kit is a full-stack web application that takes a job description and company URL, researches the company, and generates a comprehensive interview preparation kit including:
+<p align="center">
+  <strong>From Job Description → Company Research → Questions → Flashcards → Study Plan</strong>
+</p>
 
-- **Company Brief**: Summary of what the company does and how they hire
-- **Role Breakdown**: Title, seniority, responsibilities, and extracted requirements
-- **Question Bank**: Categorized questions (technical, behavioural, system-design, company-fit)
-- **Flashcards**: For quick review with confidence tracking
-- **Study Schedule**: Day-by-day plan prioritizing must-have requirements
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js" />
+  <img src="https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript" />
+  <img src="https://img.shields.io/badge/Node.js-Express-green?style=for-the-badge&logo=node.js" />
+  <img src="https://img.shields.io/badge/MongoDB-Mongoose-success?style=for-the-badge&logo=mongodb" />
+  <img src="https://img.shields.io/badge/Google-Gemini-orange?style=for-the-badge&logo=google" />
+</p>
 
-## Tech Stack
+---
 
-| Component | Technology | Reasoning |
-|-----------|-----------|-----------|
-| Frontend | Next.js 14 + Tailwind CSS | Modern React framework with SSR, great DX, and Tailwind for rapid UI development |
-| Backend | Node.js + Express | Lightweight, fast to develop, excellent for API servers |
-| Database | MongoDB + Mongoose | Flexible schema for kit structures, good for JSON-like documents |
-| Language | TypeScript | Type safety across the stack, better IDE support |
-| LLM | Google Gemini 1.5 Flash | Free tier available, good performance for code generation |
-| Scraping | Cheerio + node-fetch | Lightweight HTML parsing without browser overhead |
-| State | Zustand | Minimal, performant state management |
+## 🌟 What Is Interview Prep Kit?
 
-## High-Level Architecture
+**Interview Prep Kit** is an AI-powered full-stack platform designed to transform a job description into a structured, personalized interview preparation experience.
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Frontend (Next.js)                    │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │
-│  │ Auth UI  │ │ Kit List │ │  Builder │ │ Practice │   │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘   │
-│         ↓              ↓            ↓           ↓        │
-│         └──────────────┴────────────┴───────────┘        │
-│                    Zustand Store                         │
-└────────────────────┬────────────────────────────────────┘
-                     │ REST API
-┌────────────────────┴────────────────────────────────────┐
-│                   Backend (Express)                      │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │
-│  │  Auth    │ │   Kits   │ │Research  │ │Generation│   │
-│  │ Routes   │ │  Routes  │ │ Service  │ │ Service  │   │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘   │
-│         ↓              ↓            ↓           ↓        │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │
-│  │  User    │ │   Kit    │ │  Crawler │ │  LLM     │   │
-│  │  Model   │ │  Model   │ │  Engine  │ │ Pipeline │   │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘   │
-└────────────────────┬────────────────────────────────────┘
-                     │
-            ┌────────┴────────┐
-            │    MongoDB      │
-            └─────────────────┘
-```
+Instead of manually searching through company websites, interview experiences, technical topics, and preparation resources, candidates can provide a **Job Description + Company URL** and let the platform build a complete preparation kit.
 
-## Retrieval Approach
+### 🔄 The Journey
 
-### 1. Company Site Crawling
-- Starts at provided company URL
-- Fetches and parses HTML using Cheerio
-- Extracts links and scores them based on relevance keywords:
-  - High score: `/careers`, `/jobs`, `/hiring`, `/about`
-  - Medium score: `/blog`, `/engineering`, `/team`
-  - Penalizes: depth, external links
-- Respects `robots.txt` using `robots-parser`
-- Rate limits requests with exponential backoff
-
-### 2. Hiring Page Discovery
-- Ranks crawled pages by hiring-relevant keywords
-- Returns top candidates for hiring process information
-- Handles pages that may not exist (graceful degradation)
-
-### 3. Public Discussion Search
-- Searches DuckDuckGo for company interview discussions
-- Extracts snippets from Glassdoor, Reddit, Blind
-- Aggregates findings into a research summary
-
-### 4. Content Processing
-- Cleans HTML to extract readable text
-- Removes scripts, styles, navigation elements
-- Respects content type and size limits
-
-## Research and Generation Pipeline
-
-The pipeline executes in a specific sequence where each step depends on the previous:
-
-```
-1. Input Validation
-   ↓
-2. Site Crawling (fetch homepage, find links)
-   ↓
-3. Hiring Page Discovery (rank and fetch relevant pages)
-   ↓
-4. Public Discussion Search (find interview experiences)
-   ↓
-5. Requirement Extraction (from job description via LLM)
-   ↓
-6. Company Brief Generation (from crawled content via LLM)
-   ↓
-7. Role Breakdown (from JD + requirements via LLM)
-   ↓
-8. Question Generation (separate calls per category)
-   ↓
-9. Flashcard Generation (from requirements + questions)
-   ↓
-10. Coverage Check (deterministic - compare requirements vs questions)
-    ↓
-11. Gap Filling (generate missing questions for uncovered reqs)
-    ↓
-12. Schedule Allocation (deterministic - distribute across days)
+```text
+📄 Job Description
+        │
+        ▼
+🔍 Requirement Extraction
+        │
+        ▼
+🏢 Company Research
+        │
+        ▼
+💼 Role Analysis
+        │
+        ▼
+🧠 AI Question Generation
+        │
+        ├───────────────┐
+        ▼               ▼
+   🎯 Technical     💬 Behavioral
+        │               │
+        ├───────────────┤
+        ▼               ▼
+   🏗️ System Design  🏢 Company Fit
+        │
+        ▼
+🎴 Smart Flashcards
+        │
+        ▼
+📅 Personalized Study Plan
+        │
+        ▼
+🚀 Interview Ready
 ```
 
-### Why Separate LLM Calls Per Category?
+---
 
-Questions for different categories require different framing:
-- **Technical**: Tests specific skills from the JD
-- **Behavioural**: Uses STAR format for soft skills
-- **System Design**: Tests architectural thinking
-- **Company Fit**: Tests culture alignment
+## ✨ Why Interview Prep Kit?
 
-A single prompt would produce homogeneous questions. Separate calls with targeted instructions yield better category-appropriate questions.
+### 🧠 AI-Powered Preparation
 
-## Generated vs Edited vs Pinned State
+Uses Google Gemini to transform raw job descriptions and researched company information into targeted interview material.
 
-Each item (question, flashcard, requirement) tracks its state:
+### 🔍 Company Intelligence
 
-- **generated**: Created by the AI pipeline, will be overwritten on regeneration
-- **edited**: Modified by the user, will be preserved on regeneration (marked with `status: 'edited'`)
-- **pinned**: Manually created or explicitly locked, never overwritten on regeneration
+Automatically crawls relevant company pages and identifies careers, hiring, engineering, team, and company information.
 
-### Implementation:
-```typescript
-interface ItemState {
-  data: any;
-  status: 'generated' | 'edited' | 'pinned';
-}
+### 🎯 Requirement-Driven Questions
+
+Questions are generated around the actual skills and requirements mentioned in the job description instead of generic interview questions.
+
+### 🎴 Smart Practice
+
+Flashcards are prioritized according to confidence, helping candidates spend more time on weaker areas.
+
+### 📅 Personalized Study Schedule
+
+Automatically distributes preparation material across the available number of days.
+
+### 🛡️ Regeneration Without Losing Your Work
+
+Generated, edited, and pinned items are tracked separately so user modifications are protected during regeneration.
+
+---
+
+## 🚀 Core Features
+
+| Feature                      | Description                                                          |
+| ---------------------------- | -------------------------------------------------------------------- |
+| 🔐 **Authentication**        | Secure user authentication with JWT                                  |
+| 📄 **JD Analyzer**           | Extracts skills, requirements, responsibilities and role information |
+| 🏢 **Company Research**      | Crawls company websites for relevant information                     |
+| 🔎 **Hiring Discovery**      | Finds careers and hiring-related pages                               |
+| 💬 **Interview Research**    | Searches public interview discussions                                |
+| 🧠 **AI Question Generator** | Generates targeted interview questions                               |
+| 🏗️ **System Design Prep**   | Creates architecture-focused questions                               |
+| 🎴 **Smart Flashcards**      | Confidence-based review system                                       |
+| 📅 **Study Planner**         | Automatically creates day-by-day preparation plans                   |
+| 📊 **Coverage Checker**      | Detects missing requirement coverage                                 |
+| 🔄 **Gap Filling**           | Generates additional questions for uncovered skills                  |
+| 📌 **Pinned Content**        | Protects important questions from regeneration                       |
+| ✏️ **Editable Content**      | User edits survive future AI regeneration                            |
+| ⚡ **Graceful Failures**      | Handles unavailable sites, rate limits and missing data              |
+
+---
+
+## 🧩 The AI Preparation Pipeline
+
+The application uses a multi-stage pipeline rather than sending everything to one giant AI prompt.
+
+```text
+                    ┌─────────────────────┐
+                    │   Job Description   │
+                    └──────────┬──────────┘
+                               │
+                               ▼
+                    ┌─────────────────────┐
+                    │ Input Validation    │
+                    └──────────┬──────────┘
+                               │
+                               ▼
+                    ┌─────────────────────┐
+                    │ Company Crawling    │
+                    └──────────┬──────────┘
+                               │
+                               ▼
+                    ┌─────────────────────┐
+                    │ Hiring Discovery    │
+                    └──────────┬──────────┘
+                               │
+                               ▼
+                    ┌─────────────────────┐
+                    │ Public Discussions  │
+                    └──────────┬──────────┘
+                               │
+                               ▼
+                    ┌─────────────────────┐
+                    │ Requirement Extract │
+                    └──────────┬──────────┘
+                               │
+             ┌─────────────────┼─────────────────┐
+             ▼                 ▼                 ▼
+       🏢 Company          💼 Role            🎯 Questions
+          Brief           Breakdown            Bank
+             │                 │                 │
+             └─────────────────┼─────────────────┘
+                               ▼
+                       🎴 Flashcards
+                               │
+                               ▼
+                       🔍 Coverage Check
+                               │
+                         Missing Skills?
+                           /       \
+                         YES        NO
+                          │          │
+                          ▼          │
+                    ➕ Gap Filling  │
+                          │          │
+                          └────┬─────┘
+                               ▼
+                       📅 Study Schedule
 ```
 
-When regenerating a section:
-1. Items with status `'generated'` are replaced with new AI output
-2. Items with status `'edited'` are preserved, new questions fill gaps
-3. Items with status `'pinned'` are always preserved
+---
 
-## Schedule Allocation Algorithm
+## 💎 Smart Coverage System
 
-The schedule is allocated deterministically (not via LLM):
+One of the key features is that the application doesn't simply generate questions and stop.
 
-1. **Priority Sort**: Must-have requirements come first
-2. **Difficulty Weighting**: Harder material lands earlier
-3. **Even Distribution**: Questions spread across available days
-4. **Gap Fill**: Unassigned questions added to last day
+It checks whether the generated question bank actually covers the requirements extracted from the job description.
 
+```text
+Requirements
+     │
+     ▼
+Generated Questions
+     │
+     ▼
+Requirement Mapping
+     │
+     ▼
+Coverage Analysis
+     │
+     ├── ✅ Covered
+     │
+     └── ❌ Missing
+             │
+             ▼
+       Targeted Questions
+             │
+             ▼
+       Re-check Coverage
 ```
-days_available = N
-questions_per_day = ceil(total_questions / N)
-base_minutes = 60 + (questions_per_day × 5)
 
-For each day:
-  - Select next batch of questions
-  - Focus = first requirement covered that day
-  - Ensure all must-have requirements appear somewhere
+The system can perform up to **3 coverage passes** before finalizing the kit.
+
+---
+
+## 🎴 Confidence-Weighted Practice
+
+Preparation doesn't end after generating questions.
+
+The practice system tracks confidence and prioritizes weaker topics.
+
+```text
+        📚 Flashcard Deck
+               │
+               ▼
+        ┌──────────────┐
+        │ Review Card  │
+        └──────┬───────┘
+               │
+               ▼
+      ⭐ Confidence Score
+               │
+       ┌───────┴────────┐
+       ▼                ▼
+   Low Confidence   High Confidence
+       │                │
+       ▼                ▼
+   Review Soon      Review Later
+       │                │
+       └───────┬────────┘
+               ▼
+        Updated Progress
 ```
 
-## Coverage Checking (Second Pass)
+Cards are sorted by confidence, updated after each review, and assigned a future review interval based on confidence and review history.
 
-Coverage is checked deterministically:
+---
 
-1. After initial generation, compare `requirement_ids` in questions vs all requirements
-2. Find uncovered must-have requirements
-3. Generate targeted questions for gaps
-4. Re-check (up to MAX_PASSES = 3)
-5. Record final coverage stats in `coverage.passes`
+## 🛠️ Technology Stack
 
-## Edge Cases and Failure Handling
+### Frontend
 
-| Case | Approach |
-|------|----------|
-| Invalid company URL | Reject at input validation, return 400 |
-| Company site 404 | Record error, continue with empty research |
-| No hiring page found | Generate questions from JD only, note in brief |
-| Stub job description | Extract fewer requirements, produce thinner kit |
-| No public discussion | Skip search results, rely on site content |
-| Invalid LLM JSON | Retry with cleaned response, fallback to defaults |
-| Rate limiting | Exponential backoff, retry up to 3 times |
-| Duplicate submission | New kit created (idempotent via timestamp) |
-| 1-day schedule | All questions in one day |
-| 60-day schedule | Spread thin, add review days |
+* ⚛️ Next.js 14
+* 🎨 Tailwind CSS
+* 🟦 TypeScript
+* 🧠 Zustand
 
-## Setup Instructions
+### Backend
 
-### Prerequisites
-- Node.js 18+
-- MongoDB (local or Atlas)
-- Google Gemini API key (free tier)
-- VS Code (recommended)
+* 🟢 Node.js
+* 🚂 Express.js
+* 🟦 TypeScript
+* 🔐 JWT Authentication
 
-### Running in VS Code (Step by Step)
+### Database
 
-1. **Open VS Code** and clone or open the project folder:
-   ```
-   File > Open Folder > Select interview-prep-kit
-   ```
+* 🍃 MongoDB
+* 🔗 Mongoose
 
-2. **Install required VS Code extensions** (recommended):
-   - ESLint (`dbaeumer.vscode-eslint`)
-   - Tailwind CSS IntelliSense (`bradlc.vscode-tailwindcss`)
-   - TypeScript (`ms-vscode.vscode-typescript-next`)
+### AI
 
-3. **Open the terminal in VS Code** (Ctrl+` or View > Terminal)
+* 🤖 Google Gemini 1.5 Flash
 
-4. **Install dependencies** - run in terminal:
-   ```bash
-   # Install root dependencies
-   npm install
+### Web Research
 
-   # Install backend dependencies
-   cd backend && npm install && cd ..
+* 🔎 Cheerio
+* 🌐 node-fetch
+* 🤖 robots-parser
+* 🔍 DuckDuckGo search
 
-   # Install frontend dependencies
-   cd frontend && npm install && cd ..
-   ```
+The project's documented stack is Next.js, Tailwind, Node/Express, MongoDB/Mongoose, TypeScript, Gemini, Cheerio/node-fetch, and Zustand.
 
-5. **Set up environment variables**:
-   ```bash
-   cp backend/.env.example backend/.env
-   ```
-   Then edit `backend/.env` in VS Code and add:
-   - Your MongoDB connection string (or use local MongoDB)
-   - A Gemini API key from https://makersuite.google.com/app/apikey
-   - A secure JWT_SECRET
+---
 
-6. **Start MongoDB** (if running locally):
-   ```bash
-   mongod
-   ```
+## 🏗️ Architecture
 
-7. **Run the application** - Option A (single command):
-   ```bash
-   npm run dev
-   ```
+```text
+                         👤 USER
+                           │
+                           ▼
+              ┌────────────────────────┐
+              │     Next.js Frontend   │
+              │                        │
+              │ 🔐 Auth                │
+              │ 📚 Kit List            │
+              │ 🛠️ Builder             │
+              │ 🎯 Practice            │
+              └───────────┬────────────┘
+                          │
+                     REST API
+                          │
+                          ▼
+              ┌────────────────────────┐
+              │    Express Backend     │
+              │                        │
+              │ 🔐 Auth Routes         │
+              │ 📦 Kit Routes          │
+              │ 🔍 Research Service    │
+              │ 🤖 Generation Service  │
+              └───────┬────────┬───────┘
+                      │        │
+             ┌────────┘        └─────────┐
+             ▼                          ▼
+      🍃 MongoDB                 🤖 Gemini AI
+             │                          │
+             ▼                          ▼
+       User + Kit Data           AI Generation
+```
 
-8. **Run the application** - Option B (separate terminals):
-   - Terminal 1 (Backend): `cd backend && npm run dev`
-   - Terminal 2 (Frontend): `cd frontend && npm run dev`
+The repository documents this frontend → REST API → Express → MongoDB/LLM architecture.
 
-9. **Open in browser**:
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:3001/api/health
+---
 
-10. **Demo credentials** (on login page):
-    - Email: `demo@interviewprepkit.com` / Password: `demo123456`
-    - Email: `alex@techcorp.com` / Password: `alex123456`
-    - Email: `sarah@startup.io` / Password: `sarah123456`
+## 📊 Engineering Highlights
 
-### Local Development (CLI)
+* ⚡ **Multi-stage AI pipeline** instead of a single monolithic prompt
+* 🎯 **Requirement-to-question coverage validation**
+* 🔄 **Automatic gap filling**
+* 🧠 **Confidence-weighted practice**
+* 📌 **Generated / Edited / Pinned state management**
+* 🛡️ **robots.txt-aware crawling**
+* 🚦 **Rate limiting with exponential backoff**
+* 🧩 **Graceful degradation when company research fails**
+* 📅 **Deterministic study schedule allocation**
+* 🔁 **Retry and fallback handling for invalid AI output**
+
+---
+
+## 🔄 Content State Management
+
+Every generated item can exist in one of three states:
+
+```text
+                Generated
+                    │
+          ┌─────────┴─────────┐
+          ▼                   ▼
+       ✏️ Edited           📌 Pinned
+          │                   │
+          ▼                   ▼
+  Preserved during      Never overwritten
+   regeneration          by regeneration
+```
+
+| Status         | Behavior                                |
+| -------------- | --------------------------------------- |
+| 🤖 `generated` | Can be replaced during regeneration     |
+| ✏️ `edited`    | User modifications are preserved        |
+| 📌 `pinned`    | Permanently protected from regeneration |
+
+This state model is explicitly implemented for questions, flashcards, and requirements.
+
+---
+
+## 🗺️ Roadmap
+
+### ✅ Completed
+
+* [x] Job description analysis
+* [x] Company website crawling
+* [x] Hiring page discovery
+* [x] Interview discussion research
+* [x] AI question generation
+* [x] Flashcards
+* [x] Coverage validation
+* [x] Gap filling
+* [x] Personalized study schedule
+* [x] Confidence-based practice
+* [x] Editable & pinned content
+
+### 🔮 Future Enhancements
+
+* [ ] 🎤 AI mock interviews
+* [ ] 🗣️ Voice-based interview practice
+* [ ] 📈 Interview performance analytics
+* [ ] ☁️ Cloud-synced practice progress
+* [ ] 📱 Mobile application
+* [ ] 📧 Interview reminder notifications
+* [ ] 📊 Company-specific preparation analytics
+* [ ] 🤖 Adaptive difficulty levels
+* [ ] 🧑‍💻 Coding-round practice integration
+
+---
+
+## ⚡ Quick Start
 
 ```bash
-# Clone repository
+# Clone
 git clone <repo-url>
+
+# Enter project
 cd interview-prep-kit
 
 # Install dependencies
 npm run install:all
 
-# Set up environment
+# Configure environment
 cp backend/.env.example backend/.env
-# Edit backend/.env with your MongoDB URI and Gemini API key
 
-# Start development servers
+# Start development
 npm run dev
 ```
 
-Frontend: http://localhost:3000
-Backend: http://localhost:3001
+### 🌐 Local URLs
 
-### Batch Entry Point
+| Service         | URL                                |
+| --------------- | ---------------------------------- |
+| 🎨 Frontend     | `http://localhost:3000`            |
+| ⚙️ Backend      | `http://localhost:3001`            |
+| ❤️ Health Check | `http://localhost:3001/api/health` |
 
-```bash
-# Create input file
-cat > cases.json << 'EOF'
-[
-  {
-    "id": "case-01",
-    "jd": "Senior Backend Engineer\n\nWe are looking for...",
-    "company_url": "https://example.com",
-    "days": 5
-  }
-]
-EOF
+---
 
-# Run evaluation
-npm run evaluate -- --input cases.json --output kits.json
-```
+## 🎯 Project Goal
 
-## Environment Variables
+> **Don't prepare for "an interview." Prepare for *this interview*.**
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Backend server port | 3001 |
-| `MONGODB_URI` | MongoDB connection string | mongodb://localhost:27017/interview-prep-kit |
-| `JWT_SECRET` | Secret for JWT signing | (must be set) |
-| `FRONTEND_URL` | Frontend URL for CORS | http://localhost:3000 |
-| `GEMINI_API_KEY` | Google Gemini API key | (must be set) |
+Interview Prep Kit bridges the gap between a generic interview-preparation platform and the actual requirements of a specific job opportunity.
 
-## Known Limitations
+**Paste the JD. Add the company. Start preparing. 🚀**
 
-1. **Rate Limits**: Free tier Gemini has 15 RPM limit; pipeline handles with backoff
-2. **Site Accessibility**: Some company sites block automated access
-3. **LLM Quality**: Question quality depends on JD clarity and company research
-4. **Local Storage**: Practice progress stored in localStorage (not synced across devices)
+---
 
-## Creative Feature: Confidence-Weighted Practice
+## ⭐ If You Like This Project
 
-The practice mode implements a spaced repetition algorithm:
+If Interview Prep Kit helped you or you found the architecture interesting:
 
-- Cards sorted by confidence (weakest first)
-- After each review, confidence is updated (0.2 to 1.0)
-- Next review interval calculated based on confidence × review count
-- Progress persists locally for session continuity
+⭐ Star the repository
+🍴 Fork the project
+🐛 Report issues
+💡 Suggest improvements
+🤝 Contribute
 
-This ensures candidates focus on areas where they need the most improvement.
+**Built with ❤️, TypeScript, Node.js, Next.js, MongoDB & AI.**
