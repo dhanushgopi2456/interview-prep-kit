@@ -434,3 +434,4 @@ If Interview Prep Kit helped you or you found the architecture interesting:
 🤝 Contribute
 
 **Built with ❤️, TypeScript, Node.js, Next.js, MongoDB & AI.**
+⭐ **Star the repository if you like the project**
